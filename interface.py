@@ -29,6 +29,12 @@ def sendMessageToAllClients(msg):
     for number in dbReadSignalUserFile():
         signalSend(number, msg)
 
+@app.route('/send-to-clients', methods=["POST"])
+def sendToNumbers():
+    for numberOrUser in flask.request.json["users"]:
+        signalSend(numberOrUser, flask.request.json["message"])
+    return ("","204")
+
 @app.route('/send-all', methods=["POST"])
 def sendToAll():
     sendMessageToAllClients(flask.request.json["message"])
