@@ -2,6 +2,7 @@
 Simplistic server to listing for HTTP queries, specifically from Icinga or Grafana and send out Signal-Messages.
 
 # Signal Cli Setup
+You need `glibc>=2.29`, check this first with `ldd --version` (for Debian this means bullseye or later).
 Clone the following repositories
 
 	https://github.com/AsamK/signal-cli
