@@ -72,7 +72,7 @@ You should consider setting a pin directly after, for help with this and other o
 You should use `signal-cli  receive` regulary, otherwise your account will be flagged inactive and potentially deleted. You may ommit the `-u` option if you only have registered one account with this user on this machine. Data (including private keys) are saved to `~/.local/share/signal-cli/`.
 
 # Server Setup  
-Add the target number(s) (one per line) to signal\_targets.txt, then execute the server:
+Add the target number(s) (one per line) to signal\_targets.txt, then set the a enviroment variable `SIGNAL_API_PASS`, which must be used withing a basic authentication during access to the gateway. Finally execute the server:
 
 
 	usage: interface.py [-h] [--interface INTERFACE] 
@@ -87,6 +87,8 @@ Add the target number(s) (one per line) to signal\_targets.txt, then execute the
 	  --signal-cli-bin SIGNAL_CLI_BIN
 	                        Path to signal-cli binary if no in $PATH (default: None)
 
+`SIGNAL_CLI_BIN` can also be set as an environment variable, which will overwrite any command line option.
+
 # HTTP Request
 The HTTP request must be a *POST*-request, with *Content-Type: application/json* and a json-field containing the key *"message"* with the value being the message you want to send.
 
@@ -97,6 +99,6 @@ The following locations are supported:
 
 # Example (curl)
 
-    curl -X POST -H "Content-Type: application/json" --data '{"message":"hallo world"}' localhost:5000/send-all
+    curl -u nobody:SIGNAL_API_PASS -X POST -H "Content-Type: application/json" --data '{"message":"hallo world"}' localhost:5000/send-all
 
 
