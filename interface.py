@@ -4,6 +4,7 @@ import argparse
 import flask
 import subprocess
 import os
+from functools import wraps
 
 HOST = "icinga.atlantishq.de"
 SIGNAL_USER_FILE = "signal_targets.txt"
@@ -18,6 +19,15 @@ def dbReadSignalUserFile():
                 users.append(user)
     return users
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        auth = flask.request.authorization
+        if not auth or not auth.password == app.config["PASSWORD"]:
+            return (flask.jsonify({ 'message' : 'Authentication required' }), 401)
+        return f(*args, **kwargs)
+    return decorated_function
+
 def signalSend(user, msg):
     signalCliBin = "signal-cli"
     if app.config["SIGNAL_CLI_BIN"]:
@@ -30,17 +40,20 @@ def sendMessageToAllClients(msg):
         signalSend(number, msg)
 
 @app.route('/send-to-clients', methods=["POST"])
+@login_required
 def sendToNumbers():
     for numberOrUser in flask.request.json["users"]:
         signalSend(numberOrUser, flask.request.json["message"])
     return ("","204")
 
 @app.route('/send-all', methods=["POST"])
+@login_required
 def sendToAll():
     sendMessageToAllClients(flask.request.json["message"])
     return ("","204")
 
 @app.route('/send-all-grafana', methods=["POST"])
+@login_required
 def sendToAllGrafana():
     j = flask.request.json
     state = j["state"]
@@ -53,6 +66,7 @@ def sendToAllGrafana():
     return ("","204")
 
 @app.route('/send-all-icinga', methods=["POST"])
+@login_required
 def sendToAllIcinga():
     args = flask.request.json
 
@@ -72,6 +86,11 @@ def sendToAllIcinga():
     sendMessageToAllClients(message)
     return ("","204")
 
+@app.before_first_request
+def init():
+    app.config["PASSWORD"] = os.environ["SIGNAL_API_PASS"]
+    app.config["SIGNAL_CLI_BIN"] = os.environ["SIGNAL_CLI_BIN"]
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Simple Telegram Notification Interface',
@@ -83,5 +102,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     app.config["SIGNAL_CLI_BIN"] = os.path.expanduser(args.signal_cli_bin)
+    app.config["PASSWORD"] = os.environ["SIGNAL_API_PASS"]
 
     app.run(host=args.interface, port=args.port)
