@@ -48,8 +48,15 @@ def sendMessageToAllClients(msg):
 @app.route('/send-to-clients', methods=["POST"])
 @login_required
 def sendToNumbers():
-    for numberOrUser in flask.request.json["users"]:
-        signalSend(numberOrUser, flask.request.json["message"])
+
+    jsonDict = flask.request.json
+    if jsonDict.get("number"):
+        print("Request received to send to {} only".format(number))
+        signalSend(jsonDict["number"], flask.request.json["message"])
+    else:
+        for number in flask.request.json["numbers"]:
+            signalSend(number, flask.request.json["message"])
+
     return ("","204")
 
 @app.route('/send-all', methods=["POST"])
