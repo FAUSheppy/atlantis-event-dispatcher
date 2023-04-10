@@ -65,19 +65,6 @@ def sendToAll():
     sendMessageToAllClients(flask.request.json["message"])
     return ("","204")
 
-@app.route('/send-all-grafana', methods=["POST"])
-@login_required
-def sendToAllGrafana():
-    j = flask.request.json
-    state = j["state"]
-    if state == "ok":
-        string = "Humidity: Ok (<50%)"
-    else:
-        string = "Humidity: Warning (>50%)"
-
-    sendMessageToAllClients(string)
-    return ("","204")
-
 @app.route('/send-all-icinga', methods=["POST"])
 @login_required
 def sendToAllIcinga():
