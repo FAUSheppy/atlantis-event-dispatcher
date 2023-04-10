@@ -29,9 +29,15 @@ def login_required(f):
     return decorated_function
 
 def signalSend(user, msg):
+
+    if user not in dbReadSignalUserFile():
+        print("{} not in Userfiler, refusing to send".format(user), file=sys.stderr)
+        return
+
     signalCliBin = "signal-cli"
     if app.config["SIGNAL_CLI_BIN"]:
         signalCliBin = app.config["SIGNAL_CLI_BIN"]
+
     cmd = [signalCliBin, "send", "-m", msg, user]
     subprocess.Popen(cmd)
 
