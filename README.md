@@ -101,4 +101,9 @@ The following locations are supported:
 
     curl -u nobody:SIGNAL_API_PASS -X POST -H "Content-Type: application/json" --data '{"message":"hallo world"}' localhost:5000/send-all
 
+# Additional Packages Required
+
+The following additional packages might be requried (on Debian) to successfully install the `python-ldap`-requirement:
+
+    apt install libsasl2-dev python-dev libldap2-dev libssl-dev
 
