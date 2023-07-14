@@ -6,18 +6,31 @@ import subprocess
 import os
 from functools import wraps
 
+import ldaptools
+import messagetools
+
+from sqlalchemy import Column, Integer, String, Boolean, or_, and_
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.sql import func
+import sqlalchemy
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.sql.expression import func
+
+
 HOST = "icinga.atlantishq.de"
 SIGNAL_USER_FILE = "signal_targets.txt"
 app = flask.Flask("Signal Notification Gateway")
+db = SQLAlchemy(app)
 
-def dbReadSignalUserFile():
-    users = []
-    with open(SIGNAL_USER_FILE, "r") as f:
-        for line in f:
-            user = line.strip()
-            if user:
-                users.append(user)
-    return users
+class Status(db.Model):
+
+    __tablename__ = "dispatch_queue"
+
+    service     = Column(String, primary_key=True)
+    timestamp   = Column(Integer, primary_key=True)
+    status      = Column(String)
+    info_text   = Column(String)
 
 def login_required(f):
     @wraps(f)
@@ -28,66 +41,8 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def signalSend(user, msg):
-
-    if user not in dbReadSignalUserFile():
-        print("{} not in Userfiler, refusing to send".format(user), file=sys.stderr)
-        return
-
-    signalCliBin = "signal-cli"
-    if app.config["SIGNAL_CLI_BIN"]:
-        signalCliBin = app.config["SIGNAL_CLI_BIN"]
-
-    cmd = [signalCliBin, "send", "-m", msg, user]
-    subprocess.Popen(cmd)
-
-def sendMessageToAllClients(msg):
-    for number in dbReadSignalUserFile():
-        signalSend(number, msg)
-
-@app.route('/send-to-clients', methods=["POST"])
-@login_required
-def sendToNumbers():
-
-    jsonDict = flask.request.json
-    if jsonDict.get("number"):
-        print("Request received to send to {} only".format(number))
-        signalSend(jsonDict["number"], flask.request.json["message"])
-    else:
-        for number in flask.request.json["numbers"]:
-            signalSend(number, flask.request.json["message"])
-
-    return ("","204")
-
-@app.route('/send-all', methods=["POST"])
-@login_required
-def sendToAll():
-    sendMessageToAllClients(flask.request.json["message"])
-    return ("","204")
-
-@app.route('/send-all-icinga', methods=["POST"])
-@login_required
-def sendToAllIcinga():
-    args = flask.request.json
-
-    for key in args.keys():
-        if type(args[key]) == str:
-            print(key)
-
-    # build message #
-    serviceName = args["service_name"]
-    if args["service_display_name"]:
-        serviceName = args["service_display_name"]
-
-    message = "{service} {state}\n{host}\n{output}".format(service=serviceName,
-                                                                state=args["service_state"],
-                                                                host=args["service_host"],
-                                                                output=args["service_output"])
-    sendMessageToAllClients(message)
-    return ("","204")
-
 @app.route('/smart-send', methods=["POST"])
-@login_required
+#@login_required
 def smart_send_to_clients():
     '''Send to clients based on querying the LDAP
         requests MAY include:
@@ -110,16 +65,19 @@ def smart_send_to_clients():
     if struct:
         try:
             message = messagetools.load_struct(struct)
-        except messagetools.UnsupporedStruct() as e:
+        except messagetools.UnsupportedStruct as e:
             return (408, e.response())
 
 
     persons = ldaptools.select_targets(users, groups, app.config["LDAP_ARGS"])
-    signal.bulk_dispatch(persons, message)
+    save_in_dispatch_queue(persons, message)
     return (200, "OK")
 
-@app.before_first_request
-def init():
+def save_in_dispatch_queue(persons, message):
+    pass
+
+def create_app():
+
     app.config["PASSWORD"] = os.environ["SIGNAL_API_PASS"]
     app.config["SIGNAL_CLI_BIN"] = os.environ["SIGNAL_CLI_BIN"]
 
@@ -127,11 +85,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Simple Telegram Notification Interface',
                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
     parser.add_argument('--interface', default="localhost", help='Interface on which to listen')
     parser.add_argument('--port', default="5000", help='Port on which to listen')
     parser.add_argument("--signal-cli-bin", default=None, type=str,
                             help="Path to signal-cli binary if no in $PATH")
-
 
     parser.add_argument('--ldap-server')
     parser.add_argument('--ldap-base-dn')
@@ -143,8 +101,8 @@ if __name__ == "__main__":
     # define ldap args #
     ldap_args = {
         "LDAP_SERVER" : args.ldap_server,
-        "LDAP_BIND_DN" : args.manager_dn,
-        "LDAP_BIND_PW" : args.manager_password,
+        "LDAP_BIND_DN" : args.ldap_manager_dn,
+        "LDAP_BIND_PW" : args.ldap_manager_password,
         "LDAP_BASE_DN" : args.ldap_base_dn,
     }
     
@@ -153,7 +111,7 @@ if __name__ == "__main__":
     else:
         app.config["LDAP_ARGS"] = None
 
-    app.config["SIGNAL_CLI_BIN"] = os.path.expanduser(args.signal_cli_bin)
-    app.config["PASSWORD"] = os.environ["SIGNAL_API_PASS"]
+    with app.app_context():
+        create_app()
 
-    app.run(host=args.interface, port=args.port)
+    app.run(host=args.interface, port=args.port, debug=True)

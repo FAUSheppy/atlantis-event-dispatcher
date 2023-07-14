@@ -42,18 +42,18 @@ def ldap_query(search_filter, ldap_args, alt_base_dn=None):
 def _person_from_search_result(cn, entry):
 
     username = entry.get("uid", [None])[0]
-    name = entry..get("firstName", [None])[0]
+    name = entry.get("firstName", [None])[0]
     email = entry.get("email", [None])[0]
     phone = entry.get("telephoneNumber", [None])[0]
 
     return Person(cn, username, name, email, phone)
 
-def get_user_by_uid(username):
+def get_user_by_uid(username, ldap_args):
 
     if not username:
         return None
 
-    search_filter = "(&(objectClass=inetOrgPerson)(uid={username}))".format(username)
+    search_filter = "(&(objectClass=inetOrgPerson)(uid={username}))".format(username=username)
     results = ldap_query(search_filter, ldap_args)
     
     if not results or len(results) < 1:
@@ -100,10 +100,10 @@ def select_targets(users, groups, ldap_args, admin_group="pki"):
     persons = []
     if users:
         for username in users:
-            persons.append(get_user_by_uid(username))
+            persons.append(get_user_by_uid(username, ldap_args))
     elif groups:
         for group in groups:
-            persons.append(get_members_of_group(group))
+            persons.append(get_members_of_group(group, ldap_args))
     else:
         # send to administrators #
         persons.append(get_members_of_group())
