@@ -14,7 +14,7 @@ class Person:
         self.username = username
         self.name = name
         self.email = email
-        self.pohon = phone
+        self.phone = phone
 
 def ldap_query(search_filter, ldap_args, alt_base_dn=None):
     
@@ -103,9 +103,9 @@ def select_targets(users, groups, ldap_args, admin_group="pki"):
             persons.append(get_user_by_uid(username, ldap_args))
     elif groups:
         for group in groups:
-            persons.append(get_members_of_group(group, ldap_args))
+            persons += get_members_of_group(group, ldap_args)
     else:
         # send to administrators #
-        persons.append(get_members_of_group())
+        persons += get_members_of_group()
 
     return persons
