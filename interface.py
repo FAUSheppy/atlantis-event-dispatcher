@@ -66,13 +66,16 @@ def get_dispatch():
 
     # accumulate messages by person #
     dispatch_by_person = dict()
+    dispatch_secrets = []
     for dobj in dispatch_objects:
         if dobj.username not in dispatch_by_person:
             dispatch_by_person.update({ dobj.username : dobj.message })
+            dispatch_secrets.append(dobj.dispatch_secret)
         else:
             dispatch_by_person[dobj.username] += "\n{}".format(dobj.message)
+            dispatch_secrets.append(dobj.dispatch_secret)
 
-    response = [ { "person" : tupel[0], "message" : tupel[1], "method" : method, "uid" : dobj.dispatch_secret }
+    response = [ { "person" : tupel[0], "message" : tupel[1], "method" : method, "uids" : dispatch_secrets }
                     for tupel in dispatch_by_person.items() ]
 
     return flask.jsonify(response)

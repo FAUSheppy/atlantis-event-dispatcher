@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
         user = entry["person"]
         message = entry["message"]
-        uid = entry["uid"]
+        uid_list = entry["uids"]
 
         # send message #
         if entry["method"] == "signal":
@@ -60,6 +60,7 @@ if __name__ == "__main__":
     
         # confirm dispatch
         if not args.no_confirm:
-            confirm_dispatch(args.target, uid)
+            for uid in uid_list:
+                confirm_dispatch(args.target, uid)
 
     sys.exit(0)
