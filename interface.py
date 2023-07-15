@@ -5,6 +5,8 @@ import flask
 import subprocess
 import os
 from functools import wraps
+import datetime
+import secrets
 
 import ldaptools
 import messagetools
@@ -21,16 +23,20 @@ from sqlalchemy.sql.expression import func
 HOST = "icinga.atlantishq.de"
 SIGNAL_USER_FILE = "signal_targets.txt"
 app = flask.Flask("Signal Notification Gateway")
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///sqlite.db"
 db = SQLAlchemy(app)
 
-class Status(db.Model):
+class DispatchObject(db.Model):
 
     __tablename__ = "dispatch_queue"
 
-    service     = Column(String, primary_key=True)
-    timestamp   = Column(Integer, primary_key=True)
-    status      = Column(String)
-    info_text   = Column(String)
+    username = Column(String, primary_key=True)
+    timestamp = Column(Integer, primary_key=True)
+    phone = Column(String)
+    email = Column(String)
+    message = Column(String, primary_key=True)
+    method = Column(String)
+    dispatch_secret = Column(String)
 
 def login_required(f):
     @wraps(f)
@@ -40,6 +46,57 @@ def login_required(f):
             return (flask.jsonify({ 'message' : 'Authentication required' }), 401)
         return f(*args, **kwargs)
     return decorated_function
+
+
+@app.route('/get-dispatch')
+def get_dispatch():
+    '''Retrive consolidated list of dispatched objects'''
+
+    method = flask.request.args.get("method")
+    if not method:
+        return (500, "Missing Dispatch Target (signal|email|phone)")
+
+    # prevent message floods #
+    timeout_cutoff = datetime.datetime.now() - datetime.timedelta(seconds=5)
+    timeout_cutoff_timestamp = timeout_cutoff.timestamp()
+
+    lines_unfiltered = db.session.query(DispatchObject)
+    lines_timeout = lines_unfiltered.filter(DispatchObject.timestamp < timeout_cutoff_timestamp)
+    dispatch_objects = lines_timeout.filter(DispatchObject.method == method).all()
+
+    # accumulate messages by person #
+    dispatch_by_person = dict()
+    for dobj in dispatch_objects:
+        if dobj.username not in dispatch_by_person:
+            dispatch_by_person.update({ dobj.username : dobj.message })
+        else:
+            dispatch_by_person[dobj.username] += "\n{}".format(dobj.message)
+
+    response = [ { "person" : tupel[0], "message" : tupel[1], "method" : method, "uid" : dobj.dispatch_secret }
+                    for tupel in dispatch_by_person.items() ]
+
+    return flask.jsonify(response)
+
+
+@app.route('/confirm-dispatch', methods=["POST"])
+def confirm_dispatch():
+    '''Confirm that a message has been dispatched by replying with its dispatch secret/uid'''
+
+    confirms = flask.request.json
+
+    for c in confirms:
+
+        uid = c["uid"]
+        dpo = db.session.query(DispatchObject).filter(DispatchObject.dispatch_secret == uid).first()
+
+        if not dpo:
+            return ("No pending dispatch for this UID/Secret", 404)
+
+        db.session.delete(dpo)
+        db.session.commit()
+
+    return ("", 204)
+
 
 @app.route('/smart-send', methods=["POST"])
 #@login_required
@@ -66,20 +123,33 @@ def smart_send_to_clients():
         try:
             message = messagetools.load_struct(struct)
         except messagetools.UnsupportedStruct as e:
-            return (408, e.response())
+            return (e.response(), 408)
 
 
     persons = ldaptools.select_targets(users, groups, app.config["LDAP_ARGS"])
     save_in_dispatch_queue(persons, message)
-    return (200, "OK")
+    return ("OK", 200)
+
 
 def save_in_dispatch_queue(persons, message):
-    pass
+
+    for p in persons:
+
+        # this secret will be needed to confirm the message as dispatched #
+        dispatch_secret = secrets.token_urlsafe(32)
+
+        obj = DispatchObject(username=p.username,
+                        phone=p.phone,
+                        email=p.email,
+                        method="signal",
+                        timestamp=datetime.datetime.now().timestamp(),
+                        dispatch_secret=dispatch_secret,
+                        message=message)
+        db.session.merge(obj)
+        db.session.commit()
 
 def create_app():
-
-    app.config["PASSWORD"] = os.environ["SIGNAL_API_PASS"]
-    app.config["SIGNAL_CLI_BIN"] = os.environ["SIGNAL_CLI_BIN"]
+    db.create_all()
 
 if __name__ == "__main__":
 
@@ -105,7 +175,7 @@ if __name__ == "__main__":
         "LDAP_BIND_PW" : args.ldap_manager_password,
         "LDAP_BASE_DN" : args.ldap_base_dn,
     }
-    
+
     if not any([value is None for value in ldap_args.values()]):
         app.config["LDAP_ARGS"] = ldap_args
     else:
