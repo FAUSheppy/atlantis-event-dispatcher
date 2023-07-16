@@ -81,6 +81,14 @@ def create_app():
     app.config["PASSWORD"] = os.environ["SIGNAL_API_PASS"]
     app.config["SIGNAL_CLI_BIN"] = os.environ["SIGNAL_CLI_BIN"]
 
+    ldap_args = {
+        "LDAP_SERVER"  : os.environ["LDAP_SERVER"],
+        "LDAP_BIND_DN" : os.environ["LDAP_BIND_DN"]
+        "LDAP_BIND_PW" : os.environ["LDAP_BIND_PW"]
+        "LDAP_BASE_DN" : os.environ["LDAP_BASE_DN"]
+    }
+    app.config["LDAP_ARGS"] = ldap_args
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Simple Telegram Notification Interface',
