@@ -2,6 +2,7 @@
 
 import argparse
 import flask
+import sys
 import subprocess
 import os
 from functools import wraps
@@ -42,7 +43,9 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         auth = flask.request.authorization
-        if not auth or not auth.password == app.config["PASSWORD"]:
+        print(auth.password)
+        print(type(auth.password))
+        if not auth or not auth.lower() == app.config["PASSWORD"]:
             return (flask.jsonify({ 'message' : 'Authentication required' }), 401)
         return f(*args, **kwargs)
     return decorated_function
@@ -102,7 +105,7 @@ def confirm_dispatch():
 
 
 @app.route('/smart-send', methods=["POST"])
-#@login_required
+@login_required
 def smart_send_to_clients():
     '''Send to clients based on querying the LDAP
         requests MAY include:
@@ -153,6 +156,10 @@ def save_in_dispatch_queue(persons, message):
 
 def create_app():
     db.create_all()
+    app.config["PASSWORD"] = os.environ.get("SIGNAL_GATEWAY_PASS")
+    if not app.config["PASSWORD"]:
+        print("Missing ENV Variable SIGNAL_GATEWAY_PASS", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
 
