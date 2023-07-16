@@ -16,6 +16,12 @@ class Person:
         self.email = email
         self.phone = phone
 
+    def __eq__(self, other):
+        return other.cn == self.cn
+
+    def __hash__(self):
+        return hash(self.cn)
+
 def ldap_query(search_filter, ldap_args, alt_base_dn=None):
     
     ldap_server = ldap_args["LDAP_SERVER"]
@@ -48,10 +54,13 @@ def _person_from_search_result(cn, entry):
 
     return Person(cn, username, name, email, phone)
 
-def get_user_by_uid(username, ldap_args):
+def get_user_by_uid(username, ldap_args, uid_is_cn=False):
 
     if not username:
         return None
+
+    if uid_is_cn:
+        username = username.split(",")[0].split("=")[1]
 
     search_filter = "(&(objectClass=inetOrgPerson)(uid={username}))".format(username=username)
     results = ldap_query(search_filter, ldap_args)
@@ -68,8 +77,11 @@ def get_members_of_group(group, ldap_args):
     if not group:
         return []
 
-    search_filter = "(&(objectClass=groupOfNames)(cn={group_name})".format(group)
-    results = ldap_query(search_filter, ldap_args)
+    search_filter = "(&(objectClass=groupOfNames)(cn={group_name}))".format(group_name=group)
+
+    # TODO wtf is this btw??
+    groups_dn = ",".join([ s.replace("People","groups") for s in base_dn.split(",")])
+    results = ldap_query(search_filter, ldap_args, alt_base_dn=groups_dn)
 
     if not results:
         return []
@@ -80,15 +92,12 @@ def get_members_of_group(group, ldap_args):
     persons = []
     for member in members:
 
-        user_dn = member.decode("utf-8")
-        user_filter = "(objectClass=inetOrgPerson)"
-        results = ldap_query(user_filter, ldap_args, alt_base_dn=user_dn)
+        user_cn = member.decode("utf-8")
+        person_obj = get_user_by_uid(user_cn, ldap_args, uid_is_cn=True)
 
-        if not results:
+        if not person_obj:
             continue
 
-        cn, entry = results[0]
-        person_obj = _person_from_search_result(cn, entry)
         persons.append(person_obj)
 
     return persons
@@ -106,6 +115,6 @@ def select_targets(users, groups, ldap_args, admin_group="pki"):
             persons += get_members_of_group(group, ldap_args)
     else:
         # send to administrators #
-        persons += get_members_of_group()
+        persons += get_members_of_group(admin_group, ldap_args)
 
-    return persons
+    return set(persons)
