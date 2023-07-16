@@ -2,6 +2,7 @@ FROM python:3.9-slim-buster
 
 RUN apt update
 RUN apt install python3-pip -y
+RUN apt install libsasl2-dev python-dev libldap2-dev libssl-dev
 RUN python3 -m pip install --upgrade pip
 RUN apt install curl -y
 RUN apt autoremove -y
