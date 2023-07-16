@@ -75,7 +75,7 @@ def get_dispatch():
             dispatch_by_person[dobj.username] += "\n{}".format(dobj.message)
             dispatch_secrets.append(dobj.dispatch_secret)
 
-    response = [ { "person" : tupel[0], "message" : tupel[1], "method" : method, "uids" : dispatch_secrets }
+    response = [ { "person" : str(tupel[0]), "message" : tupel[1], "method" : method, "uids" : dispatch_secrets }
                     for tupel in dispatch_by_person.items() ]
 
     return flask.jsonify(response)
