@@ -46,6 +46,7 @@ if __name__ == "__main__":
 
     response.raise_for_status()
 
+    dispatch_confirmed = []
     for entry in response.json():
 
         user = entry["person"]
@@ -61,6 +62,10 @@ if __name__ == "__main__":
         # confirm dispatch
         if not args.no_confirm:
             for uid in uid_list:
-                confirm_dispatch(args.target, uid)
+                if uid not in dispatch_confirmed:
+                    confirm_dispatch(args.target, uid)
+                    dispatch_confirmed.append(uid)
+                else:
+                    continue
 
     sys.exit(0)
