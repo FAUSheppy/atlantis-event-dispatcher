@@ -1,4 +1,5 @@
 import ldap
+import sys
 
 # LDAP server details
 ldap_server = "ldap://localhost:5005"
@@ -57,6 +58,7 @@ def _person_from_search_result(cn, entry):
 def get_user_by_uid(username, ldap_args, uid_is_cn=False):
 
     if not username:
+        print("WARNING: get_user_by_uid called with empty username", file=sys.stderr)
         return None
 
     if uid_is_cn:
@@ -66,6 +68,7 @@ def get_user_by_uid(username, ldap_args, uid_is_cn=False):
     results = ldap_query(search_filter, ldap_args)
     
     if not results or len(results) < 1:
+        print("WARNING: {} not found, no dispatch saved".format(username), file=sys.stderr)
         return None
 
     cn, p = results[0]
