@@ -74,7 +74,7 @@ def get_dispatch():
     # add phone numbers and emails #
     for obj in response:
         for person in dispatch_objects:
-            if dispatch_objects.username == obj["person"]:
+            if obj.username == obj["person"]:
                 obj.update({ "email" : person.email })
                 obj.update({ "phone" : person.phone })
 
