@@ -5,7 +5,6 @@ import flask
 import sys
 import subprocess
 import os
-from functools import wraps
 import datetime
 import secrets
 
@@ -37,17 +36,6 @@ class DispatchObject(db.Model):
     message = Column(String, primary_key=True)
     method = Column(String)
     dispatch_secret = Column(String)
-
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        auth = flask.request.authorization
-        print(auth.password)
-        print(type(auth.password))
-        if not auth or not auth.lower() == app.config["PASSWORD"]:
-            return (flask.jsonify({ 'message' : 'Authentication required' }), 401)
-        return f(*args, **kwargs)
-    return decorated_function
 
 
 @app.route('/get-dispatch')
@@ -104,7 +92,6 @@ def confirm_dispatch():
 
 
 @app.route('/smart-send', methods=["POST"])
-@login_required
 def smart_send_to_clients():
     '''Send to clients based on querying the LDAP
         requests MAY include:
