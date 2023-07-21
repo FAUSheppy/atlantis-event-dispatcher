@@ -196,8 +196,8 @@ if __name__ == "__main__":
         "LDAP_BIND_DN" : args.ldap_manager_dn,
         "LDAP_BIND_PW" : args.ldap_manager_password,
         "LDAP_BASE_DN" : args.ldap_base_dn,
-        "LDAP_NO_READ_ENV" : True
     }
+    app.config["LDAP_NO_READ_ENV"] = True
 
     if not any([value is None for value in ldap_args.values()]):
         app.config["LDAP_ARGS"] = ldap_args
