@@ -18,7 +18,8 @@ def signal_send(user, message):
 def confirm_dispatch(target, uid):
 
     '''Confirm to server that message has been dispatched and can be removed'''
-    response = requests.post(target + "/confirm-dispatch", json=[{ "uid" : uid }])
+    response = requests.post(target + "/confirm-dispatch", json=[{ "uid" : uid }],
+                                auth=(args.user, args.password))
 
     if response.status_code not in [200, 204]:
         print("Failed to confirm disptach with server for {} ({})".format(uid, response.text), file=sys.stderr)
@@ -28,17 +29,22 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Query Atlantis Dispatch for Signal',
                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
     parser.add_argument('--target', required=True)
     parser.add_argument('--method', default="signal")
     parser.add_argument('--no-confirm', action="store_true")
     parser.add_argument('--signal-cli-bin')
+
+    parser.add_argument('--user')
+    parser.add_argument('--password')
 
     args = parser.parse_args() 
 
     if args.signal_cli_bin:
         signal_cli_bin = args.signal_cli_bin
 
-    response = requests.get(args.target + "/get-dispatch?method={}".format(args.method))
+    response = requests.get(args.target + "/get-dispatch?method={}".format(args.method),
+                            auth=(args.user, args.password))
 
     # check status #
     if response.status_code == HTTP_NOT_FOUND:
