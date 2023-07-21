@@ -65,8 +65,18 @@ def get_dispatch():
             dispatch_by_person[dobj.username] += "\n{}".format(dobj.message)
             dispatch_secrets.append(dobj.dispatch_secret)
 
-    response = [ { "person" : str(tupel[0]), "message" : tupel[1], "method" : method, "uids" : dispatch_secrets }
-                    for tupel in dispatch_by_person.items() ]
+    response = [ { "person" : str(tupel[0]),
+                    "message" : tupel[1],
+                    "method" : method,
+                    "uids" : dispatch_secrets 
+                  } for tupel in dispatch_by_person.items() ]
+
+    # add phone numbers and emails #
+    for obj in response:
+        for person in dispatch_objects:
+            if dispatch_objects.username == obj["person"]:
+                obj.update({ "email" : person.email })
+                obj.update({ "phone" : person.phone })
 
     return flask.jsonify(response)
 
