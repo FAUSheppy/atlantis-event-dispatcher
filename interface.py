@@ -144,11 +144,8 @@ def save_in_dispatch_queue(persons, message):
         db.session.commit()
 
 def create_app():
+
     db.create_all()
-    app.config["PASSWORD"] = os.environ.get("SIGNAL_GATEWAY_PASS")
-    if not app.config["PASSWORD"]:
-        print("Missing ENV Variable SIGNAL_GATEWAY_PASS", file=sys.stderr)
-        sys.exit(1)
 
     if not app.config.get("LDAP_NO_READ_ENV"):
         ldap_args = {
@@ -158,6 +155,7 @@ def create_app():
             "LDAP_BASE_DN" : os.environ["LDAP_BASE_DN"]
         }
         app.config["LDAP_ARGS"] = ldap_args
+        print("Setting LDAP_ARGS...")
 
 if __name__ == "__main__":
 
