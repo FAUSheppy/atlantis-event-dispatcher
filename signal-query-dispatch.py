@@ -10,9 +10,9 @@ from functools import wraps
 
 HTTP_NOT_FOUND = 404
 
-def signal_send(user, message):
+def signal_send(phone, message):
     '''Send message via signal'''
-    cmd = [signal_cli_bin, "send", "-m", message, user]
+    cmd = [signal_cli_bin, "send", "-m", "'{}'".format(message.replace("'","")), phone]
     p = subprocess.run(cmd)
 
 def confirm_dispatch(target, uid):
@@ -56,12 +56,13 @@ if __name__ == "__main__":
     for entry in response.json():
 
         user = entry["person"]
+        phone = entry["phone"]
         message = entry["message"]
         uid_list = entry["uids"]
 
         # send message #
         if entry["method"] == "signal":
-            signal_send(user, message)
+            signal_send(phone, message)
         else:
             print("Unsupported dispatch method {}".format(entry["method"]), sys=sys.stderr)
     
