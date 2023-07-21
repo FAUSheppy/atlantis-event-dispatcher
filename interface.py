@@ -22,7 +22,6 @@ from sqlalchemy.sql.expression import func
 
 
 HOST = "icinga.atlantishq.de"
-SIGNAL_USER_FILE = "signal_targets.txt"
 app = flask.Flask("Signal Notification Gateway")
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///sqlite.db"
 db = SQLAlchemy(app)
