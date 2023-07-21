@@ -164,13 +164,14 @@ def create_app():
         print("Missing ENV Variable SIGNAL_GATEWAY_PASS", file=sys.stderr)
         sys.exit(1)
 
-    ldap_args = {
-        "LDAP_SERVER"  : os.environ["LDAP_SERVER"],
-        "LDAP_BIND_DN" : os.environ["LDAP_BIND_DN"]
-        "LDAP_BIND_PW" : os.environ["LDAP_BIND_PW"]
-        "LDAP_BASE_DN" : os.environ["LDAP_BASE_DN"]
-    }
-    app.config["LDAP_ARGS"] = ldap_args
+    if not app.config.get("LDAP_NO_READ_ENV"):
+        ldap_args = {
+            "LDAP_SERVER"  : os.environ["LDAP_SERVER"],
+            "LDAP_BIND_DN" : os.environ["LDAP_BIND_DN"],
+            "LDAP_BIND_PW" : os.environ["LDAP_BIND_PW"],
+            "LDAP_BASE_DN" : os.environ["LDAP_BASE_DN"]
+        }
+        app.config["LDAP_ARGS"] = ldap_args
 
 if __name__ == "__main__":
 
@@ -195,6 +196,7 @@ if __name__ == "__main__":
         "LDAP_BIND_DN" : args.ldap_manager_dn,
         "LDAP_BIND_PW" : args.ldap_manager_password,
         "LDAP_BASE_DN" : args.ldap_base_dn,
+        "LDAP_NO_READ_ENV" : True
     }
 
     if not any([value is None for value in ldap_args.values()]):
