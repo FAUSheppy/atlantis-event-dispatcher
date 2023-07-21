@@ -35,4 +35,4 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          tags: "${{ secrets.REGISTRY }}/athq/async-icinga:latest"
+          tags: "${{ secrets.REGISTRY }}/athq/event-dispatcher:latest"
