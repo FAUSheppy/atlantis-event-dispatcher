@@ -141,6 +141,9 @@ def save_in_dispatch_queue(persons, message):
 
     for p in persons:
 
+        if not p:
+            continue
+
         # this secret will be needed to confirm the message as dispatched #
         dispatch_secret = secrets.token_urlsafe(32)
 
