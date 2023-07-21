@@ -26,17 +26,17 @@ def confirm_dispatch(target, uid):
 
 if __name__ == "__main__":
 
-    # set signal cli from env #
-    signal_cli_bin = os.environ["SIGNAL_CLI_BIN"]
-
     parser = argparse.ArgumentParser(description='Query Atlantis Dispatch for Signal',
                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--target', required=True)
     parser.add_argument('--method', default="signal")
     parser.add_argument('--no-confirm', action="store_true")
+    parser.add_argument('--signal-cli-bin')
 
     args = parser.parse_args() 
 
+    if args.signal_cli_bin:
+        signal_cli_bin = args.signal_cli_bin
 
     response = requests.get(args.target + "/get-dispatch?method={}".format(args.method))
 
