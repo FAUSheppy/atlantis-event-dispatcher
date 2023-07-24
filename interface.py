@@ -127,6 +127,7 @@ def smart_send_to_clients():
         try:
             message = messagetools.load_struct(struct)
         except messagetools.UnsupportedStruct as e:
+            print(str(e), file=sys.stderr)
             return (e.response(), 408)
 
 
