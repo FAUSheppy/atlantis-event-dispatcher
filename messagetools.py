@@ -7,7 +7,7 @@ class UnsupportedStruct(Exception):
 
 def make_icinga_message(struct):
 
-    first_line  = "{state} - {service} ({host})".format(state=struct.get("state"),
+    first_line  = "{state} - {service} ({host})".format(state=struct.get("service_state"),
                     service=struct.get("service_name"), host=struct.get("service_host"))
     second_line = struct.get("service_output") or ""
     third_line  = "Direkt-Link: {link}".format(link=struct.get("icingaeweb_url"))
