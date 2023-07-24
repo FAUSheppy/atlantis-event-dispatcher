@@ -10,7 +10,7 @@ def make_icinga_message(struct):
     first_line  = "{state} - {service} ({host})".format(state=struct.get("service_state"),
                     service=struct.get("service_name"), host=struct.get("service_host"))
     second_line = struct.get("service_output") or ""
-    third_line  = "Direkt-Link: {link}".format(link=struct.get("icingaweb_url"))
+    #third_line  = "Direkt-Link: {link}".format(link=struct.get("icingaweb_url"))
 
     if not struct.get("owners") and not struct.get("owner-groups"):
         fourth_line = "Notification to: admins (default)"
@@ -20,7 +20,7 @@ def make_icinga_message(struct):
         groups_strings = [ g + "-group" for g in groups ]
         fourth_line = "Notification to: " + ", ".join(owners) + " " + ", ".join(groups_strings)
 
-    return "\n".join([first_line, second_line, third_line, fourth_line])
+    return "\n".join([first_line, second_line, fourth_line])
 
 def make_generic_message(struct):
     pass
