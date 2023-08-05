@@ -1,12 +1,6 @@
 import ldap
 import sys
 
-# LDAP server details
-ldap_server = "ldap://localhost:5005"
-base_dn = "ou=People,dc=atlantishq,dc=de"
-manager_dn = "cn=Manager,dc=atlantishq,dc=de"
-manager_password = "flanigan"
-
 class Person:
 
     def __init__(self, cn, username, name, email, phone):
