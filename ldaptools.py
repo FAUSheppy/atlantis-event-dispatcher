@@ -105,10 +105,11 @@ def select_targets(users, groups, ldap_args, admin_group="pki"):
     '''Returns a list of persons to send notifications to'''
 
     persons = []
-    if users:
+    # FIXME better handling of empty owner/groups
+    if users and not any([ not s for s in users]):
         for username in users:
             persons.append(get_user_by_uid(username, ldap_args))
-    elif groups:
+    elif groups and not any([ not s for s in groups ]):
         for group in groups:
             persons += get_members_of_group(group, ldap_args)
     else:
