@@ -30,7 +30,7 @@ def ldap_query(search_filter, ldap_args, alt_base_dn=None):
 
     # estabilish connection
     conn = ldap.initialize(ldap_server)
-    conn.simple_bind_s(manager_dn, manager_password)
+    conn.simple_bind_s(manager_dn, manager_pw)
 
     # search in scope #
     search_scope = ldap.SCOPE_SUBTREE
