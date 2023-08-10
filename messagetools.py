@@ -20,7 +20,12 @@ def make_icinga_message(struct):
         groups_strings = [ g + "-group" for g in groups ]
         fourth_line = "Notification to: " + ", ".join(owners) + " " + ", ".join(groups_strings)
 
-    return "\n".join([first_line, second_line, fourth_line])
+    if struct.get("comment"):
+        fith_line = "Extra Comment: \n{}".format(struct.get("comment"))
+        return "\n".join([first_line, second_line, fourth_line, fith_line])
+    else:
+        return "\n".join([first_line, second_line, fourth_line])
+
 
 def make_generic_message(struct):
     pass
