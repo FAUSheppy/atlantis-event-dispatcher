@@ -77,6 +77,7 @@ def get_members_of_group(group, ldap_args):
     search_filter = "(&(objectClass=groupOfNames)(cn={group_name}))".format(group_name=group)
 
     # TODO wtf is this btw??
+    base_dn = ldap_args["LDAP_BASE_DN"]
     groups_dn = ",".join([ s.replace("People","groups") for s in base_dn.split(",")])
     results = ldap_query(search_filter, ldap_args, alt_base_dn=groups_dn)
 
