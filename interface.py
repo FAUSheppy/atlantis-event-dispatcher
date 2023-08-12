@@ -22,7 +22,7 @@ from sqlalchemy.sql.expression import func
 
 HOST = "icinga.atlantishq.de"
 app = flask.Flask("Signal Notification Gateway")
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ["SQLITE"] or "sqlite:///sqlite.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///sqlite.db"
 db = SQLAlchemy(app)
 
 class DispatchObject(db.Model):
