@@ -144,7 +144,7 @@ def smart_send_to_clients():
 
     persons = ldaptools.select_targets(users, groups, app.config["LDAP_ARGS"])
     dispatch_secrets = save_in_dispatch_queue(persons, message)
-    return flask_sqlalchemy.jsonify(dispatch_secrets)
+    return flask.jsonify(dispatch_secrets)
 
 
 def save_in_dispatch_queue(persons, message):
