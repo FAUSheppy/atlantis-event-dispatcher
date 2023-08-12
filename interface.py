@@ -22,7 +22,7 @@ from sqlalchemy.sql.expression import func
 
 HOST = "icinga.atlantishq.de"
 app = flask.Flask("Signal Notification Gateway")
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///sqlite.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ["SQLITE"] or "sqlite:///sqlite.db"
 db = SQLAlchemy(app)
 
 class DispatchObject(db.Model):
@@ -36,6 +36,17 @@ class DispatchObject(db.Model):
     message = Column(String, primary_key=True)
     method = Column(String)
     dispatch_secret = Column(String)
+
+@app.route('/get-dispatch-status')
+def get_dispatch_status():
+    '''Retrive the status of a specific dispatch by it's secret'''
+
+    secret = flask.request.args.get("secret")
+    do = db.session.query(DispatchObject).filter(DispatchObject.dispatch_secret == secret).first()
+    if not do:
+        return ("Not in Queue",  200)
+    else:
+        return ("Waiting for dispatch", 200)
 
 
 @app.route('/get-dispatch')
@@ -132,12 +143,14 @@ def smart_send_to_clients():
 
 
     persons = ldaptools.select_targets(users, groups, app.config["LDAP_ARGS"])
-    save_in_dispatch_queue(persons, message)
-    return ("OK", 200)
+    dispatch_secrets = save_in_dispatch_queue(persons, message)
+    return flask_sqlalchemy.jsonify(dispatch_secrets)
 
 
 def save_in_dispatch_queue(persons, message):
 
+
+    dispatch_secrets = []
     for p in persons:
 
         if not p:
@@ -153,8 +166,13 @@ def save_in_dispatch_queue(persons, message):
                         timestamp=datetime.datetime.now().timestamp(),
                         dispatch_secret=dispatch_secret,
                         message=message)
+
         db.session.merge(obj)
         db.session.commit()
+
+        dispatch_secrets.append(dispatch_secret)
+
+    return dispatch_secrets
 
 def create_app():
 
