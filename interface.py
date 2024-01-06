@@ -36,6 +36,7 @@ class DispatchObject(db.Model):
     message = Column(String, primary_key=True)
     method = Column(String)
     dispatch_secret = Column(String)
+    dispatch_error = Column(String)
 
 @app.route('/get-dispatch-status')
 def get_dispatch_status():
