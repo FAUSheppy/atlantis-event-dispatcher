@@ -28,7 +28,9 @@ def make_icinga_message(struct):
 
 
 def make_generic_message(struct):
-    pass
+
+    msg = struct.get("message") or struct.get("msg")
+    return msg
 
 def load_struct(struct):
     
