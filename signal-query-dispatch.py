@@ -59,8 +59,13 @@ if __name__ == "__main__":
 
     for entry in response.json():
 
+        print(entry)
         user = entry["person"]
-        phone = entry["phone"]
+        phone = entry.get("phone")
+        if not phone:
+            print("No phone number! Skipping...", file=sys.stderr)
+            continue
+
         message = entry["message"]
         uid_list = entry["uids"]
 
@@ -70,6 +75,7 @@ if __name__ == "__main__":
                 signal_send(phone, message)
             except subprocess.CalledProcessError as e:
                 print("Dispatch failed {}".format(e))
+                continue
         else:
             print("Unsupported dispatch method {}".format(entry["method"]), sys=sys.stderr)
     
