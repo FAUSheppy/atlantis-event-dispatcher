@@ -14,6 +14,8 @@ def signal_send(phone, message):
     '''Send message via signal'''
     cmd = [signal_cli_bin, "send", "-m", "'{}'".format(message.replace("'","")), phone]
     p = subprocess.run(cmd)
+    p.check_returncode()
+
 
 def confirm_dispatch(target, uid):
 
@@ -53,6 +55,8 @@ if __name__ == "__main__":
     response.raise_for_status()
 
     dispatch_confirmed = []
+    dispatch_failed = []
+
     for entry in response.json():
 
         user = entry["person"]
@@ -62,7 +66,10 @@ if __name__ == "__main__":
 
         # send message #
         if entry["method"] == "signal":
-            signal_send(phone, message)
+            try:
+                signal_send(phone, message)
+            except subprocess.CalledProcessError as e:
+                print("Dispatch failed {}".format(e))
         else:
             print("Unsupported dispatch method {}".format(entry["method"]), sys=sys.stderr)
     
