@@ -55,16 +55,22 @@ def get_dispatch():
     '''Retrive consolidated list of dispatched objects'''
 
     method = flask.request.args.get("method")
+    timeout = flask.request.args.get("timeout") or 5 # timeout in seconds
+
     if not method:
-        return (500, "Missing Dispatch Target (signal|email|phone)")
+        return (500, "Missing Dispatch Target (signal|email|phone|ntfy|all)")
 
     # prevent message floods #
-    timeout_cutoff = datetime.datetime.now() - datetime.timedelta(seconds=5)
+    timeout_cutoff = datetime.datetime.now() - datetime.timedelta(seconds=timeout)
     timeout_cutoff_timestamp = timeout_cutoff.timestamp()
 
     lines_unfiltered = db.session.query(DispatchObject)
     lines_timeout = lines_unfiltered.filter(DispatchObject.timestamp < timeout_cutoff_timestamp)
-    dispatch_objects = lines_timeout.filter(DispatchObject.method == method).all()
+
+    if method != "all":
+        dispatch_objects = lines_timeout.filter(DispatchObject.method == method).all()
+    else:
+        dispatch_objects = lines_timeout.all()
 
     # accumulate messages by person #
     dispatch_by_person = dict()
