@@ -1,19 +1,22 @@
 #!/usr/bin/python3
 
 import sys
+import argparse
 import subprocess
 import os
 import requests
-from functools import wraps
 import smtphelper
+import json
 
 HTTP_NOT_FOUND = 404
+
+DISPATCH_SERVER = None
 AUTH = None
 
 def debug_send(uuid, data, fail_it=False):
     '''Dummy function to print and ack a dispatch for debugging'''
 
-    print(json.dumps(data, intent=2))
+    print(json.dumps(data, indent=2))
     if fail_it:
         report_failed_dispatch(uuid, "Dummy Error for Debugging")
     else:
@@ -31,19 +34,37 @@ def ntfy_send(dispatch_uuid, user_topic, message, ntfy_push_target, ntfy_user, n
     '''Send message via NTFY topic'''
 
     try:
-        r = requests.post(ntfy_push_target, auth=(ntfy_user, ntfy_pass) , json=payload)
+
+        # build message #
+        payload = {
+            "topic" : user_topic or "test", #TODO fix topic
+            "message" : message,
+            "title" : "Atlantis Notify",
+            #"tags" : [],
+            #"priority" : 4,
+            #"attach" : None,
+            #"click" : None,
+            #"actions" : []
+        }
+
+        # send #
+        r = requests.post(ntfy_push_target, auth=(ntfy_user, ntfy_pass), json=payload)
+        print(r.status_code, r.text, payload)
         r.raise_for_status()
-        confirm_dispatch(uuid)
+
+        # talk to dispatch #
+        confirm_dispatch(dispatch_uuid)
+
     except requests.exceptions.HTTPError as e:
-        report_failed_dispatch(uuid, str(e))
+        report_failed_dispatch(dispatch_uuid, str(e))
     except requests.exceptions.ConnectionError as e:
-        report_failed_dispatch(uuid, str(e))
+        report_failed_dispatch(dispatch_uuid, str(e))
 
 def report_failed_dispatch(uuid, error):
     '''Inform the server that the dispatch has failed'''
 
-    response = requests.post(args.dispatch_target + "/report-dispatch-failed",
-                                json={ "uuid" : uuid, "error" : error })
+    payload = [{ "uuid" : uuid, "error" : error }]
+    response = requests.post(DISPATCH_SERVER + "/report-dispatch-failed", json=payload, auth=AUTH)
 
     if response.status_code not in [200, 204]:
         print("Failed to report back failed dispatch for {} ({})".format(
@@ -52,8 +73,8 @@ def report_failed_dispatch(uuid, error):
 def confirm_dispatch(uuid):
     '''Confirm to server that message has been dispatched and can be removed'''
 
-    response = requests.post(target + "/confirm-dispatch", json=[{ "uuid" : uuid }],
-                                auth=(args.user, args.password))
+    payload = [{ "uuid" : uuid }]
+    response = requests.post(DISPATCH_SERVER + "/confirm-dispatch", json=payload, auth=AUTH)
 
     if response.status_code not in [200, 204]:
         print("Failed to confirm dispatch with server for {} ({})".format(
@@ -79,7 +100,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args() 
 
-    # set authentication #
+    # set dispatch server & authentication #
+    DISPATCH_SERVER = args.dispatch_server
     AUTH = (args.dispatch_user, args.dispatch_password)
 
     dispatch_server = args.dispatch_server or os.environ.get("DISPATCH_SERVER")
@@ -95,8 +117,7 @@ if __name__ == "__main__":
     smtp_pass = args.smtp_pass or os.environ.get("SMTP_PASS")
 
     # request dispatches #
-    response = requests.get(args.target + "/get-dispatch".format(args.method),
-                            auth=(args.user, args.password))
+    response = requests.get(args.dispatch_server + "/get-dispatch?method=all", auth=AUTH)
 
     # check status #
     if response.status_code == HTTP_NOT_FOUND:
@@ -114,8 +135,8 @@ if __name__ == "__main__":
     # iterate over dispatch requests #
     for entry in response.json():
 
-        user = entry["person"]
-        dispatch_uuid = entry["uid"]
+        user = entry["username"]
+        dispatch_uuid = entry["uuid"]
         method = entry["method"]
         message = entry["message"]
 
@@ -132,9 +153,9 @@ if __name__ == "__main__":
         elif method == "email":
             email_send(dispatch_uuid, email_address, message, smtp_target, smtp_user, smtp_pass)
         elif method == "debug":
-            debug_send(uuid, entry)
+            debug_send(dispatch_uuid, entry)
         elif method == "debug-fail":
-            debug_send(uuid, entry, fail_it=True)
+            debug_send(dispatch_uuid, entry, fail_it=True)
         else:
             print("Unsupported dispatch method {}".format(entry["method"]), sys=sys.stderr)
             continue
