@@ -5,13 +5,26 @@ import subprocess
 import os
 import requests
 from functools import wraps
+import smtphelper
 
 HTTP_NOT_FOUND = 404
 AUTH = None
 
-def email_address(dispatch_uuid, user_topic, message, smtp_target, smtp_user, smtp_pass):
-    '''Send message via email'''
+def debug_send(uuid, data, fail_it=False):
+    '''Dummy function to print and ack a dispatch for debugging'''
 
+    print(json.dumps(data, intent=2))
+    if fail_it:
+        report_failed_dispatch(uuid, "Dummy Error for Debugging")
+    else:
+        confirm_dispatch(uuid)
+
+
+def email_send(dispatch_uuid, email_address, message, smtp_target, smtp_user, smtp_pass):
+    '''Send message via email'''
+   
+    subject = "Atlantis Dispatch"
+    smtphelper.smtp_send(smtp_target, smtp_user, smtp_pass, email_address, subject, message)
     report_failed_dispatch(uuid, "Email dispatch not yet implemented")
 
 def ntfy_send(dispatch_uuid, user_topic, message, ntfy_push_target, ntfy_user, ntfy_pass):
@@ -117,7 +130,11 @@ if __name__ == "__main__":
         elif method == "ntfy":
             ntfy_send(dispatch_uuid, user_topic, message, ntfy_push_target, ntfy_user, ntfy_pass)
         elif method == "email":
-            email_send(email_address, message)
+            email_send(dispatch_uuid, email_address, message, smtp_target, smtp_user, smtp_pass)
+        elif method == "debug":
+            debug_send(uuid, entry)
+        elif method == "debug-fail":
+            debug_send(uuid, entry, fail_it=True)
         else:
             print("Unsupported dispatch method {}".format(entry["method"]), sys=sys.stderr)
             continue
