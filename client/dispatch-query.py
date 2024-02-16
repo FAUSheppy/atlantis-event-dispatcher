@@ -46,7 +46,7 @@ def ntfy_api_get_topic(ntfy_api_server, ntfy_api_token, username):
         print(r.text)
         return r.json().get("topic")
 
-def ntfy_send(dispatch_uuid, user_topic, message, ntfy_push_target, ntfy_user, ntfy_pass):
+def ntfy_send(dispatch_uuid, user_topic, title, message, ntfy_push_target, ntfy_user, ntfy_pass):
     '''Send message via NTFY topic'''
 
     if not user_topic:
@@ -57,13 +57,13 @@ def ntfy_send(dispatch_uuid, user_topic, message, ntfy_push_target, ntfy_user, n
 
         # build message #
         payload = {
-            "topic" : user_topic or "test", #TODO fix topic
+            "topic" : user_topic,
             "message" : message,
-            "title" : "Atlantis Notify",
+            "title" : title or "Atlantis Notify",
             #"tags" : [],
-            #"priority" : 4,
+            "priority" : 4,
             #"attach" : None,
-            #"click" : None,
+            "click" : "https://vid.pr0gramm.com/2022/11/06/ed66c8c5a9cd1a3b.mp4",
             #"actions" : []
         }
 
@@ -143,7 +143,7 @@ if __name__ == "__main__":
     smtp_pass = args.smtp_pass or os.environ.get("SMTP_PASS")
 
     # request dispatches #
-    response = requests.get(args.dispatch_server + "/get-dispatch?method=all", auth=AUTH)
+    response = requests.get(args.dispatch_server + "/get-dispatch?method=all&timeout=0", auth=AUTH)
 
     # check status #
     if response.status_code == HTTP_NOT_FOUND:
@@ -165,6 +165,7 @@ if __name__ == "__main__":
         dispatch_uuid = entry["uuid"]
         method = entry["method"]
         message = entry["message"]
+        title = entry.get("title")
 
         # method dependent fields #
         phone = entry.get("phone")
@@ -175,7 +176,8 @@ if __name__ == "__main__":
             pass
         elif method == "ntfy":
             user_topic = ntfy_api_get_topic(ntfy_api_server, ntfy_api_token, user)
-            ntfy_send(dispatch_uuid, user_topic, message, ntfy_push_target, ntfy_user, ntfy_pass)
+            ntfy_send(dispatch_uuid, user_topic, title, message,
+                            ntfy_push_target, ntfy_user, ntfy_pass)
         elif method == "email":
             email_send(dispatch_uuid, email_address, message, smtp_target, smtp_user, smtp_pass)
         elif method == "debug":

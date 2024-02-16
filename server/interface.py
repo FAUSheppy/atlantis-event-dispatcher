@@ -192,6 +192,7 @@ def smart_send_to_clients():
     users = instructions.get("users")
     groups = instructions.get("groups")
     message = instructions.get("msg")
+    title = instructions.get("title")
     method = instructions.get("method")
 
     # allow single use string instead of array #
@@ -212,11 +213,11 @@ def smart_send_to_clients():
     else:
         persons = ldaptools.select_targets(users, groups, app.config["LDAP_ARGS"])
 
-    dispatch_secrets = save_in_dispatch_queue(persons, message, method)
+    dispatch_secrets = save_in_dispatch_queue(persons, title, message, method)
     return flask.jsonify(dispatch_secrets)
 
 
-def save_in_dispatch_queue(persons, message, method):
+def save_in_dispatch_queue(persons, title, message, method):
 
 
     dispatch_secrets = []
@@ -237,6 +238,7 @@ def save_in_dispatch_queue(persons, message, method):
                         method=method or master_method,
                         timestamp=datetime.datetime.now().timestamp(),
                         dispatch_secret=dispatch_secret,
+                        title=title,
                         message=message)
 
         db.session.merge(obj)
