@@ -30,8 +30,28 @@ def email_send(dispatch_uuid, email_address, message, smtp_target, smtp_user, sm
     smtphelper.smtp_send(smtp_target, smtp_user, smtp_pass, email_address, subject, message)
     report_failed_dispatch(uuid, "Email dispatch not yet implemented")
 
+def ntfy_api_get_topic(ntfy_api_server, ntfy_api_token, username):
+    '''Get the topic of the user'''
+
+    params = {
+        "user" : username,
+        "token" : ntfy_api_token,
+    }
+
+    r = requests.get(ntfy_api_server + "/topic", params=params)
+    if r.status_code != 200:
+        print(r.text)
+        return None
+    else:
+        print(r.text)
+        return r.json().get("topic")
+
 def ntfy_send(dispatch_uuid, user_topic, message, ntfy_push_target, ntfy_user, ntfy_pass):
     '''Send message via NTFY topic'''
+
+    if not user_topic:
+        report_failed_dispatch(dispatch_uuid, "No user topic")
+        return
 
     try:
 
@@ -90,6 +110,9 @@ if __name__ == "__main__":
     parser.add_argument('--dispatch-user')
     parser.add_argument('--dispatch-password')
 
+    parser.add_argument('--ntfy-api-server')
+    parser.add_argument('--ntfy-api-token')
+
     parser.add_argument('--ntfy-push-target')
     parser.add_argument('--ntfy-user')
     parser.add_argument('--ntfy-pass')
@@ -107,6 +130,9 @@ if __name__ == "__main__":
     dispatch_server = args.dispatch_server or os.environ.get("DISPATCH_SERVER")
     dispatch_user = args.dispatch_user or os.environ.get("DISPATCH_USER")
     dispatch_password = args.dispatch_password or os.environ.get("DISPATCH_PASSWORD")
+
+    ntfy_api_server = args.ntfy_api_server or os.environ.get("NTFY_API_SERVER")
+    ntfy_api_token = args.ntfy_api_token or os.environ.get("NTFY_API_TOKEN")
 
     ntfy_push_target = args.ntfy_push_target or os.environ.get("NTFY_PUSH_TARGET")
     ntfy_user = args.ntfy_user or os.environ.get("NTFY_USER")
@@ -141,7 +167,6 @@ if __name__ == "__main__":
         message = entry["message"]
 
         # method dependent fields #
-        user_topic = entry.get("topic")
         phone = entry.get("phone")
         email_address = entry.get("email")
 
@@ -149,6 +174,7 @@ if __name__ == "__main__":
         if method == "signal":
             pass
         elif method == "ntfy":
+            user_topic = ntfy_api_get_topic(ntfy_api_server, ntfy_api_token, user)
             ntfy_send(dispatch_uuid, user_topic, message, ntfy_push_target, ntfy_user, ntfy_pass)
         elif method == "email":
             email_send(dispatch_uuid, email_address, message, smtp_target, smtp_user, smtp_pass)
