@@ -126,13 +126,14 @@ if __name__ == "__main__":
 
     args = parser.parse_args() 
 
-    # set dispatch server & authentication #
-    DISPATCH_SERVER = args.dispatch_server
-    AUTH = (args.dispatch_user, args.dispatch_password)
 
     dispatch_server = args.dispatch_server or os.environ.get("DISPATCH_SERVER")
     dispatch_user = args.dispatch_user or os.environ.get("DISPATCH_USER")
     dispatch_password = args.dispatch_password or os.environ.get("DISPATCH_PASSWORD")
+
+    # set dispatch server & authentication global #
+    DISPATCH_SERVER = dispatch_server
+    AUTH = (dispatch_user, dispatch_password)
 
     ntfy_api_server = args.ntfy_api_server or os.environ.get("NTFY_API_SERVER")
     ntfy_api_token = args.ntfy_api_token or os.environ.get("NTFY_API_TOKEN")
@@ -149,7 +150,7 @@ if __name__ == "__main__":
     while args.loop or first_run:
 
         # request dispatches #
-        response = requests.get(args.dispatch_server + "/get-dispatch?method=all&timeout=0", auth=AUTH)
+        response = requests.get(dispatch_server + "/get-dispatch?method=all&timeout=0", auth=AUTH)
 
         # check status #
         if response.status_code == HTTP_NOT_FOUND:
