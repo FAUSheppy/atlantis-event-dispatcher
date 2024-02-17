@@ -28,7 +28,12 @@ def smtp_send(server, user, password, recipient, subject, body):
     # Establish a connection to the SMTP server
     server = smtplib.SMTP(smtp_server, smtp_port)
     server.starttls()  # Secure the connection
-    server.login(sender_email, sender_password)
+
+    # fix login user if necessary #
+    sender_user = sender_email
+    if "@" in sender_email:
+        sender_user = sender_email.split("@")[0]
+    server.login(sender_user, sender_password)
     
     # Send the email
     server.sendmail(sender_email, recipient_email, message.as_string())

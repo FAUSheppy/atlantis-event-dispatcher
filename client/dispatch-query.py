@@ -26,10 +26,15 @@ def debug_send(uuid, data, fail_it=False):
 
 def email_send(dispatch_uuid, email_address, message, smtp_target, smtp_user, smtp_pass):
     '''Send message via email'''
-   
+  
+    if not email_address:
+        print("Missing E-Mail Address for STMP send", file=sys.stderr)
+        report_failed_dispatch(dispatch_uuid, "Missing email-field in dispatch infor")
+        return
+
     subject = "Atlantis Dispatch"
     smtphelper.smtp_send(smtp_target, smtp_user, smtp_pass, email_address, subject, message)
-    report_failed_dispatch(uuid, "Email dispatch not yet implemented")
+    confirm_dispatch(dispatch_uuid)
 
 def ntfy_api_get_topic(ntfy_api_server, ntfy_api_token, username):
     '''Get the topic of the user'''
