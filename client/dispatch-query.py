@@ -1,36 +1,91 @@
 #!/usr/bin/python3
 
 import sys
+import time
+import argparse
 import subprocess
 import os
 import requests
-from functools import wraps
+import smtphelper
+import json
 
 HTTP_NOT_FOUND = 404
+
+DISPATCH_SERVER = None
 AUTH = None
 
-def email_address(dispatch_uuid, user_topic, message, smtp_target, smtp_user, smtp_pass):
-    '''Send message via email'''
+def debug_send(uuid, data, fail_it=False):
+    '''Dummy function to print and ack a dispatch for debugging'''
 
+    print(json.dumps(data, indent=2))
+    if fail_it:
+        report_failed_dispatch(uuid, "Dummy Error for Debugging")
+    else:
+        confirm_dispatch(uuid)
+
+
+def email_send(dispatch_uuid, email_address, message, smtp_target, smtp_user, smtp_pass):
+    '''Send message via email'''
+   
+    subject = "Atlantis Dispatch"
+    smtphelper.smtp_send(smtp_target, smtp_user, smtp_pass, email_address, subject, message)
     report_failed_dispatch(uuid, "Email dispatch not yet implemented")
 
-def ntfy_send(dispatch_uuid, user_topic, message, ntfy_push_target, ntfy_user, ntfy_pass):
+def ntfy_api_get_topic(ntfy_api_server, ntfy_api_token, username):
+    '''Get the topic of the user'''
+
+    params = {
+        "user" : username,
+        "token" : ntfy_api_token,
+    }
+
+    r = requests.get(ntfy_api_server + "/topic", params=params)
+    if r.status_code != 200:
+        print(r.text)
+        return None
+    else:
+        print(r.text)
+        return r.json().get("topic")
+
+def ntfy_send(dispatch_uuid, user_topic, title, message, ntfy_push_target, ntfy_user, ntfy_pass):
     '''Send message via NTFY topic'''
 
+    if not user_topic:
+        report_failed_dispatch(dispatch_uuid, "No user topic")
+        return
+
     try:
-        r = requests.post(ntfy_push_target, auth=(ntfy_user, ntfy_pass) , json=payload)
+
+        # build message #
+        payload = {
+            "topic" : user_topic,
+            "message" : message,
+            "title" : title or "Atlantis Notify",
+            #"tags" : [],
+            "priority" : 4,
+            #"attach" : None,
+            "click" : "https://vid.pr0gramm.com/2022/11/06/ed66c8c5a9cd1a3b.mp4",
+            #"actions" : []
+        }
+
+        # send #
+        r = requests.post(ntfy_push_target, auth=(ntfy_user, ntfy_pass), json=payload)
+        print(r.status_code, r.text, payload)
         r.raise_for_status()
-        confirm_dispatch(uuid)
+
+        # talk to dispatch #
+        confirm_dispatch(dispatch_uuid)
+
     except requests.exceptions.HTTPError as e:
-        report_failed_dispatch(uuid, str(e))
+        report_failed_dispatch(dispatch_uuid, str(e))
     except requests.exceptions.ConnectionError as e:
-        report_failed_dispatch(uuid, str(e))
+        report_failed_dispatch(dispatch_uuid, str(e))
 
 def report_failed_dispatch(uuid, error):
     '''Inform the server that the dispatch has failed'''
 
-    response = requests.post(args.dispatch_target + "/report-dispatch-failed",
-                                json={ "uuid" : uuid, "error" : error })
+    payload = [{ "uuid" : uuid, "error" : error }]
+    response = requests.post(DISPATCH_SERVER + "/report-dispatch-failed", json=payload, auth=AUTH)
 
     if response.status_code not in [200, 204]:
         print("Failed to report back failed dispatch for {} ({})".format(
@@ -39,8 +94,8 @@ def report_failed_dispatch(uuid, error):
 def confirm_dispatch(uuid):
     '''Confirm to server that message has been dispatched and can be removed'''
 
-    response = requests.post(target + "/confirm-dispatch", json=[{ "uuid" : uuid }],
-                                auth=(args.user, args.password))
+    payload = [{ "uuid" : uuid }]
+    response = requests.post(DISPATCH_SERVER + "/confirm-dispatch", json=payload, auth=AUTH)
 
     if response.status_code not in [200, 204]:
         print("Failed to confirm dispatch with server for {} ({})".format(
@@ -56,6 +111,9 @@ if __name__ == "__main__":
     parser.add_argument('--dispatch-user')
     parser.add_argument('--dispatch-password')
 
+    parser.add_argument('--ntfy-api-server')
+    parser.add_argument('--ntfy-api-token')
+
     parser.add_argument('--ntfy-push-target')
     parser.add_argument('--ntfy-user')
     parser.add_argument('--ntfy-pass')
@@ -64,14 +122,20 @@ if __name__ == "__main__":
     parser.add_argument('--smtp-user')
     parser.add_argument('--smtp-pass')
 
+    parser.add_argument('--loop', default=True, action=argparse.BooleanOptionalAction)
+
     args = parser.parse_args() 
 
-    # set authentication #
+    # set dispatch server & authentication #
+    DISPATCH_SERVER = args.dispatch_server
     AUTH = (args.dispatch_user, args.dispatch_password)
 
     dispatch_server = args.dispatch_server or os.environ.get("DISPATCH_SERVER")
     dispatch_user = args.dispatch_user or os.environ.get("DISPATCH_USER")
     dispatch_password = args.dispatch_password or os.environ.get("DISPATCH_PASSWORD")
+
+    ntfy_api_server = args.ntfy_api_server or os.environ.get("NTFY_API_SERVER")
+    ntfy_api_token = args.ntfy_api_token or os.environ.get("NTFY_API_TOKEN")
 
     ntfy_push_target = args.ntfy_push_target or os.environ.get("NTFY_PUSH_TARGET")
     ntfy_user = args.ntfy_user or os.environ.get("NTFY_USER")
@@ -81,45 +145,58 @@ if __name__ == "__main__":
     smtp_user = args.smtp_user or os.environ.get("SMTP_USER")
     smtp_pass = args.smtp_pass or os.environ.get("SMTP_PASS")
 
-    # request dispatches #
-    response = requests.get(args.target + "/get-dispatch".format(args.method),
-                            auth=(args.user, args.password))
+    first_run = True
+    while args.loop or first_run:
 
-    # check status #
-    if response.status_code == HTTP_NOT_FOUND:
-        sys.exit(0)
+        # request dispatches #
+        response = requests.get(args.dispatch_server + "/get-dispatch?method=all&timeout=0", auth=AUTH)
 
-    # fallback check for status #
-    response.raise_for_status()
+        # check status #
+        if response.status_code == HTTP_NOT_FOUND:
+            sys.exit(0)
 
-    # track dispatches that were confirmed to avoid duplicate confirmation #
-    dispatch_confirmed = []
+        # fallback check for status #
+        response.raise_for_status()
 
-    # track failed dispatches #
-    errors = dict()
+        # track dispatches that were confirmed to avoid duplicate confirmation #
+        dispatch_confirmed = []
 
-    # iterate over dispatch requests #
-    for entry in response.json():
+        # track failed dispatches #
+        errors = dict()
 
-        user = entry["person"]
-        dispatch_uuid = entry["uid"]
-        method = entry["method"]
-        message = entry["message"]
+        # iterate over dispatch requests #
+        for entry in response.json():
 
-        # method dependent fields #
-        user_topic = entry.get("topic")
-        phone = entry.get("phone")
-        email_address = entry.get("email")
+            user = entry["username"]
+            dispatch_uuid = entry["uuid"]
+            method = entry["method"]
+            message = entry["message"]
+            title = entry.get("title")
 
-        # send message #
-        if method == "signal":
-            pass
-        elif method == "ntfy":
-            ntfy_send(dispatch_uuid, user_topic, message, ntfy_push_target, ntfy_user, ntfy_pass)
-        elif method == "email":
-            email_send(email_address, message)
-        else:
-            print("Unsupported dispatch method {}".format(entry["method"]), sys=sys.stderr)
-            continue
+            # method dependent fields #
+            phone = entry.get("phone")
+            email_address = entry.get("email")
 
-    sys.exit(0)
+            # send message #
+            if method == "signal":
+                pass
+            elif method == "ntfy":
+                user_topic = ntfy_api_get_topic(ntfy_api_server, ntfy_api_token, user)
+                ntfy_send(dispatch_uuid, user_topic, title, message,
+                                ntfy_push_target, ntfy_user, ntfy_pass)
+            elif method == "email":
+                email_send(dispatch_uuid, email_address, message, smtp_target, smtp_user, smtp_pass)
+            elif method == "debug":
+                debug_send(dispatch_uuid, entry)
+            elif method == "debug-fail":
+                debug_send(dispatch_uuid, entry, fail_it=True)
+            else:
+                print("Unsupported dispatch method {}".format(entry["method"]), sys=sys.stderr)
+                continue
+
+        # wait a moment #
+        if args.loop:
+            time.sleep(5)
+        
+        # handle non-loop runs #
+        first_run = False

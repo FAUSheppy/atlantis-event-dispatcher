@@ -1,19 +1,16 @@
-FROM python:3.9-slim-buster
+FROM alpine
 
-RUN apt update
-RUN apt install python3-pip -y
-RUN apt install libsasl2-dev python-dev libldap2-dev libssl-dev -y
-RUN python3 -m pip install --upgrade pip
-RUN apt install curl -y
-RUN apt autoremove -y
-RUN apt clean
+RUN apk add --update --no-cache python3 py3-pip py3-ldap
 
 WORKDIR /app
 
-RUN python3 -m pip install waitress
+RUN python3 -m pip install --no-cache-dir --break-system-packages waitress
 
 COPY req.txt .
-RUN python3 -m pip install --no-cache-dir -r req.txt
+
+# remove python-ldap (installed via apk) #
+RUN sed -i '/^python-ldap.*$/d' req.txt
+RUN python3 -m pip install --no-cache-dir --break-system-packages -r req.txt
 
 # precreate database directory for mount (will otherwise be created at before_first_request)
 COPY ./ .

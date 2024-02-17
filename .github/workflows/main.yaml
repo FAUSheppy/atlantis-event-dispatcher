@@ -29,10 +29,18 @@ jobs:
           username: ${{ secrets.REGISTRY_USER }}
           password: ${{ secrets.REGISTRY_PASS }}
       -
-        name: Build and push signal-event-dispatcher
+        name: Build and push event-dispatcher
         uses: docker/build-push-action@v3
         with:
-          context: .
+          context: ./server/
           platforms: linux/amd64
           push: true
           tags: "${{ secrets.REGISTRY }}/athq/event-dispatcher:latest"
+      -
+        name: Build and push event-dispatcher
+        uses: docker/build-push-action@v3
+        with:
+          context: ./client/
+          platforms: linux/amd64
+          push: true
+          tags: "${{ secrets.REGISTRY }}/athq/event-dispatcher-worker:latest"

@@ -33,10 +33,34 @@ class DispatchObject(db.Model):
     timestamp = Column(Integer, primary_key=True)
     phone = Column(String)
     email = Column(String)
+
+    title = Column(String)
     message = Column(String, primary_key=True)
     method = Column(String)
+
     dispatch_secret = Column(String)
     dispatch_error = Column(String)
+
+    def serialize(self):
+        ret = {
+            "person" : self.username, # legacy field TODO remove at some point
+            "username" : self.username,
+            "timestamp" : self.timestamp,
+            "phone" : self.phone,
+            "email" : self.email,
+            "title" : self.title,
+            "message" : self.message,
+            "uuid" : self.dispatch_secret,
+            "method" : self.method,
+            "error" : self.dispatch_error,
+        }
+        
+        # fix bytes => string from LDAP #
+        for key, value in ret.items():
+            if type(value) == bytes:
+                ret[key] = value.decode("utf-8")
+
+        return ret
 
 @app.route('/get-dispatch-status')
 def get_dispatch_status():
@@ -56,6 +80,7 @@ def get_dispatch():
 
     method = flask.request.args.get("method")
     timeout = flask.request.args.get("timeout") or 5 # timeout in seconds
+    timeout = int(timeout)
 
     if not method:
         return (500, "Missing Dispatch Target (signal|email|phone|ntfy|all)")
@@ -72,34 +97,61 @@ def get_dispatch():
     else:
         dispatch_objects = lines_timeout.all()
 
-    # accumulate messages by person #
-    dispatch_by_person = dict()
-    dispatch_secrets = []
-    for dobj in dispatch_objects:
-        if dobj.username not in dispatch_by_person:
-            dispatch_by_person.update({ dobj.username : dobj.message })
-            dispatch_secrets.append(dobj.dispatch_secret)
-        else:
-            dispatch_by_person[dobj.username] += "\n{}".format(dobj.message)
-            dispatch_secrets.append(dobj.dispatch_secret)
+    # TODO THIS IS THE NEW MASTER PART
+    if method and method != "signal":
+        print([ d.serialize() for d in dispatch_objects])
+        return flask.jsonify([ d.serialize() for d in dispatch_objects])
+    else:
+        # TODO THIS PART WILL BE REMOVED ##
+        # accumulate messages by person #
+        dispatch_by_person = dict()
+        dispatch_secrets = []
+        for dobj in dispatch_objects:
+            if dobj.username not in dispatch_by_person:
+                dispatch_by_person.update({ dobj.username : dobj.message })
+                dispatch_secrets.append(dobj.dispatch_secret)
+            else:
+                dispatch_by_person[dobj.username] += "\n{}".format(dobj.message)
+                dispatch_secrets.append(dobj.dispatch_secret)
 
-    response = [ { "person" : tupel[0].decode("utf-8"),
-                    "message" : tupel[1],
-                    "method" : method,
-                    "uids" : dispatch_secrets 
-                  } for tupel in dispatch_by_person.items() ]
+        response = [ { "person" : tupel[0].decode("utf-8"),
+                        "message" : tupel[1],
+                        "method" : method,
+                        "uids" : dispatch_secrets 
+                      } for tupel in dispatch_by_person.items() ]
 
-    # add phone numbers and emails #
-    for obj in response:
-        for person in dispatch_objects:
-            if obj["person"] == person.username.decode("utf-8"):
-                if person.email:
-                    obj.update({ "email" : person.email.decode("utf-8") })
-                if person.phone:
-                    obj.update({ "phone" : person.phone.decode("utf-8") })
+        # add phone numbers and emails #
+        for obj in response:
+            for person in dispatch_objects:
+                if obj["person"] == person.username.decode("utf-8"):
+                    if person.email:
+                        obj.update({ "email" : person.email.decode("utf-8") })
+                    if person.phone:
+                        obj.update({ "phone" : person.phone.decode("utf-8") })
 
-    return flask.jsonify(response)
+        return flask.jsonify(response)
 
+@app.route('/report-dispatch-failed', methods=["POST"])
+def reject_dispatch():
+    '''Inform the server that a dispatch has failed'''
+
+    rejects = flask.request.json
+
+    for r in rejects:
+
+        uuid = r["uuid"]
+        error = r["error"]
+        dpo = db.session.query(DispatchObject).filter(
+                        DispatchObject.dispatch_secret == uuid).first()
+
+        if not dpo:
+            return ("No pending dispatch for this UID/Secret", 404)
+
+        dpo.dispatch_error = error
+        db.session.merge(dpo)
+        db.session.commit()
+
+    return ("", 204)
 
 @app.route('/confirm-dispatch', methods=["POST"])
 def confirm_dispatch():
@@ -109,8 +161,9 @@ def confirm_dispatch():
 
     for c in confirms:
 
-        uid = c["uid"]
-        dpo = db.session.query(DispatchObject).filter(DispatchObject.dispatch_secret == uid).first()
+        uuid = c["uuid"]
+        dpo = db.session.query(DispatchObject).filter(
+                        DispatchObject.dispatch_secret == uuid).first()
 
         if not dpo:
             return ("No pending dispatch for this UID/Secret", 404)
@@ -139,6 +192,12 @@ def smart_send_to_clients():
     users = instructions.get("users")
     groups = instructions.get("groups")
     message = instructions.get("msg")
+    title = instructions.get("title")
+    method = instructions.get("method")
+
+    # allow single use string instead of array #
+    if type(users) == str:
+        users = [users]
 
     struct = instructions.get("data")
     if struct:
@@ -148,13 +207,17 @@ def smart_send_to_clients():
             print(str(e), file=sys.stderr)
             return (e.response(), 408)
 
+    if method in ["debug", "debug-fail"]:
+        persons = [ldaptools.Person(cn="none", username=users[0], name="Mr. Debug",
+                        email="invalid@nope.notld", phone="0")]
+    else:
+        persons = ldaptools.select_targets(users, groups, app.config["LDAP_ARGS"])
 
-    persons = ldaptools.select_targets(users, groups, app.config["LDAP_ARGS"])
-    dispatch_secrets = save_in_dispatch_queue(persons, message)
+    dispatch_secrets = save_in_dispatch_queue(persons, title, message, method)
     return flask.jsonify(dispatch_secrets)
 
 
-def save_in_dispatch_queue(persons, message):
+def save_in_dispatch_queue(persons, title, message, method):
 
 
     dispatch_secrets = []
@@ -166,12 +229,16 @@ def save_in_dispatch_queue(persons, message):
         # this secret will be needed to confirm the message as dispatched #
         dispatch_secret = secrets.token_urlsafe(32)
 
+        # TODO fix this
+        master_method = "signal"
+
         obj = DispatchObject(username=p.username,
                         phone=p.phone,
                         email=p.email,
-                        method="signal",
+                        method=method or master_method,
                         timestamp=datetime.datetime.now().timestamp(),
                         dispatch_secret=dispatch_secret,
+                        title=title,
                         message=message)
 
         db.session.merge(obj)
