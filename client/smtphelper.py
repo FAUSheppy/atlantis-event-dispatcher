@@ -13,7 +13,7 @@ def smtp_send(server, user, password, recipient, subject, body):
     
     # SMTP server details
     smtp_server = server
-    smtp_port = 587  # Default port for TLS connection
+    smtp_port = 25  # Default port for TLS connection
     
     # Create a message
     message = MIMEMultipart()

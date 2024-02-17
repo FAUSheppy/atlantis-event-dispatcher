@@ -33,7 +33,8 @@ def email_send(dispatch_uuid, email_address, message, smtp_target, smtp_user, sm
         return
 
     subject = "Atlantis Dispatch"
-    smtphelper.smtp_send(smtp_target, smtp_user, smtp_pass, email_address, subject, message)
+    smtphelper.smtp_send(smtp_target, smtp_user, smtp_pass, email_address,
+                            subject, message)
     confirm_dispatch(dispatch_uuid)
 
 def ntfy_api_get_topic(ntfy_api_server, ntfy_api_token, username):
