@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import sys
+import time
 import argparse
 import subprocess
 import os
@@ -121,6 +122,8 @@ if __name__ == "__main__":
     parser.add_argument('--smtp-user')
     parser.add_argument('--smtp-pass')
 
+    parser.add_argument('--loop', default=True, action=argparse.BooleanOptionalAction)
+
     args = parser.parse_args() 
 
     # set dispatch server & authentication #
@@ -142,50 +145,58 @@ if __name__ == "__main__":
     smtp_user = args.smtp_user or os.environ.get("SMTP_USER")
     smtp_pass = args.smtp_pass or os.environ.get("SMTP_PASS")
 
-    # request dispatches #
-    response = requests.get(args.dispatch_server + "/get-dispatch?method=all&timeout=0", auth=AUTH)
+    first_run = True
+    while args.loop or first_run:
 
-    # check status #
-    if response.status_code == HTTP_NOT_FOUND:
-        sys.exit(0)
+        # request dispatches #
+        response = requests.get(args.dispatch_server + "/get-dispatch?method=all&timeout=0", auth=AUTH)
 
-    # fallback check for status #
-    response.raise_for_status()
+        # check status #
+        if response.status_code == HTTP_NOT_FOUND:
+            sys.exit(0)
 
-    # track dispatches that were confirmed to avoid duplicate confirmation #
-    dispatch_confirmed = []
+        # fallback check for status #
+        response.raise_for_status()
 
-    # track failed dispatches #
-    errors = dict()
+        # track dispatches that were confirmed to avoid duplicate confirmation #
+        dispatch_confirmed = []
 
-    # iterate over dispatch requests #
-    for entry in response.json():
+        # track failed dispatches #
+        errors = dict()
 
-        user = entry["username"]
-        dispatch_uuid = entry["uuid"]
-        method = entry["method"]
-        message = entry["message"]
-        title = entry.get("title")
+        # iterate over dispatch requests #
+        for entry in response.json():
 
-        # method dependent fields #
-        phone = entry.get("phone")
-        email_address = entry.get("email")
+            user = entry["username"]
+            dispatch_uuid = entry["uuid"]
+            method = entry["method"]
+            message = entry["message"]
+            title = entry.get("title")
 
-        # send message #
-        if method == "signal":
-            pass
-        elif method == "ntfy":
-            user_topic = ntfy_api_get_topic(ntfy_api_server, ntfy_api_token, user)
-            ntfy_send(dispatch_uuid, user_topic, title, message,
-                            ntfy_push_target, ntfy_user, ntfy_pass)
-        elif method == "email":
-            email_send(dispatch_uuid, email_address, message, smtp_target, smtp_user, smtp_pass)
-        elif method == "debug":
-            debug_send(dispatch_uuid, entry)
-        elif method == "debug-fail":
-            debug_send(dispatch_uuid, entry, fail_it=True)
-        else:
-            print("Unsupported dispatch method {}".format(entry["method"]), sys=sys.stderr)
-            continue
+            # method dependent fields #
+            phone = entry.get("phone")
+            email_address = entry.get("email")
 
-    sys.exit(0)
+            # send message #
+            if method == "signal":
+                pass
+            elif method == "ntfy":
+                user_topic = ntfy_api_get_topic(ntfy_api_server, ntfy_api_token, user)
+                ntfy_send(dispatch_uuid, user_topic, title, message,
+                                ntfy_push_target, ntfy_user, ntfy_pass)
+            elif method == "email":
+                email_send(dispatch_uuid, email_address, message, smtp_target, smtp_user, smtp_pass)
+            elif method == "debug":
+                debug_send(dispatch_uuid, entry)
+            elif method == "debug-fail":
+                debug_send(dispatch_uuid, entry, fail_it=True)
+            else:
+                print("Unsupported dispatch method {}".format(entry["method"]), sys=sys.stderr)
+                continue
+
+        # wait a moment #
+        if args.loop:
+            time.sleep(5)
+        
+        # handle non-loop runs #
+        first_run = False
