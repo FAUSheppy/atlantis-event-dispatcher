@@ -25,6 +25,25 @@ app = flask.Flask("Signal Notification Gateway")
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///sqlite.db"
 db = SQLAlchemy(app)
 
+class UserSettings(db.Model):
+
+    __tablename__ = "user_settings"
+
+    username = Column(String, primary_key=True)
+    signal_priority = Column(Integer)
+    email_priority = Column(Integer)
+    ntfy_priority = Column(Integer)
+
+    def get_highest_prio_method(self):
+
+        if self.signal_priority >= max(self.email_priority, self.ntfy_priority):
+            return "signal"
+        elif self.email_priority >= max(self.signal_priority, self.ntfy_priority):
+            return "email"
+        else:
+            return "ntfy"
+        
+
 class DispatchObject(db.Model):
 
     __tablename__ = "dispatch_queue"
@@ -42,6 +61,7 @@ class DispatchObject(db.Model):
     dispatch_error = Column(String)
 
     def serialize(self):
+
         ret = {
             "person" : self.username, # legacy field TODO remove at some point
             "username" : self.username,
@@ -54,11 +74,24 @@ class DispatchObject(db.Model):
             "method" : self.method,
             "error" : self.dispatch_error,
         }
-        
+
         # fix bytes => string from LDAP #
         for key, value in ret.items():
             if type(value) == bytes:
                 ret[key] = value.decode("utf-8")
+
+        if ret["method"] == "any":
+            user_settings = db.session.query(UserSettings).filter(
+                                UserSettings.username == ret["username"]).first()
+
+            if not user_settings and self.phone:
+                ret["method"] = "signal"
+            elif not user_settings and self.email:
+                ret["method"] = "email"
+            elif user_settings:
+                ret["method"] = user_settings.get_highest_prio_method()
+            else:
+                ret["method"] = "ntfy"
 
         return ret
 
@@ -83,7 +116,7 @@ def get_dispatch():
     timeout = int(timeout)
 
     if not method:
-        return (500, "Missing Dispatch Target (signal|email|phone|ntfy|all)")
+        return (500, "Missing Dispatch Target (signal|email|phone|ntfy|all|any)")
 
     # prevent message floods #
     timeout_cutoff = datetime.datetime.now() - datetime.timedelta(seconds=timeout)
