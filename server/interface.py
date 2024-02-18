@@ -42,6 +42,14 @@ class UserSettings(db.Model):
             return "email"
         else:
             return "ntfy"
+
+    def serizalize(self):
+        return {
+            "username" : self.username,
+            "signal_priority" : self.signal_priority,
+            "email_priority" : self.email_priority,
+            "ntfy_priority" : self.ntfy_priority,
+        }
         
 
 class DispatchObject(db.Model):
@@ -106,6 +114,34 @@ def get_dispatch_status():
     else:
         return ("Waiting for dispatch", 200)
 
+@app.route('/settings', methods=["GET", "POST"])
+def settings():
+
+    # check static access token #
+    token = flask.request.args.get("token")
+    if token != app.config["SETTINGS_ACCESS_TOKEN"]:
+        return ("SETTINGS_ACCESS_TOKEN incorrect. Refusing to access settings", 401)
+
+    user = flask.request.args.get("user")
+    if not user:
+        return ("Missing user paramter in URL", 500)
+
+    if flask.request.method == "POST":
+        posted = UserSettings(username=user,
+                        signal_priority=flask.request.json.get("signal_priority") or 0,
+                        email_priority=flask.request.json.get("email_priority") or 0,
+                        ntfy_priority=flask.request.json.get("ntfy_priority") or 0)
+        db.session.merge(posted)
+        db.session.commit()
+        return ('', 204)
+
+    if flask.request.method == "GET":
+        user_settings = db.session.query(UserSettings).filter(UserSettings.username==user).first()
+        if not user_settings:
+            return ('', 404)
+        else:
+            return flask.jsonify(user_settings.serizalize())
+    
 
 @app.route('/get-dispatch')
 def get_dispatch():
@@ -293,7 +329,7 @@ def create_app():
             "LDAP_BASE_DN" : os.environ["LDAP_BASE_DN"]
         }
         app.config["LDAP_ARGS"] = ldap_args
-        print("Setting LDAP_ARGS...")
+        app.config["SETTINGS_ACCESS_TOKEN"] = os.environ["SETTINGS_ACCESS_TOKEN"]
 
 if __name__ == "__main__":
 
@@ -310,6 +346,8 @@ if __name__ == "__main__":
     parser.add_argument('--ldap-manager-dn')
     parser.add_argument('--ldap-manager-password')
 
+    parser.add_argument('--settings-access-token')
+
     args = parser.parse_args()
 
     # define ldap args #
@@ -320,6 +358,8 @@ if __name__ == "__main__":
         "LDAP_BASE_DN" : args.ldap_base_dn,
     }
     app.config["LDAP_NO_READ_ENV"] = True
+
+    app.config["SETTINGS_ACCESS_TOKEN"] = args.settings_access_token
 
     if not any([value is None for value in ldap_args.values()]):
         app.config["LDAP_ARGS"] = ldap_args
