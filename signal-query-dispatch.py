@@ -24,7 +24,7 @@ def report_dispatch_error(target, uid, error):
 def confirm_dispatch(target, uid):
     '''Confirm to server that message has been dispatched and can be removed'''
 
-    response = requests.post(target + "/confirm-dispatch", json=[{ "uid" : uid }],
+    response = requests.post(target + "/confirm-dispatch", json=[{ "uuid" : uid }],
                                 auth=(args.user, args.password))
 
     if response.status_code not in [200, 204]:
@@ -64,6 +64,7 @@ if __name__ == "__main__":
     # track dispatches that were confirmed to avoid duplicate confirmation #
     dispatch_confirmed = []
     dispatch_failed = []
+    errors = {}
 
     for entry in response.json():
 
@@ -82,6 +83,9 @@ if __name__ == "__main__":
             try:
                 signal_send(phone, message)
             except subprocess.CalledProcessError as e:
+                for uid in uid_list:
+                    errors.update({uid:str(e)})
+
                 print("Dispatch failed {}".format(e))
                 continue
         else:
@@ -94,7 +98,7 @@ if __name__ == "__main__":
                 if uid not in dispatch_confirmed:
 
                     # confirm or report fail #
-                    if errors[uid]:
+                    if errors.get(uid):
                         report_dispatch_error(args.target, uid, errors[uid])
                     else:
                         confirm_dispatch(args.target, uid)
