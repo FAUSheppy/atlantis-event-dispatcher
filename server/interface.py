@@ -138,10 +138,11 @@ def settings():
     if flask.request.method == "GET":
         user_settings = db.session.query(UserSettings).filter(UserSettings.username==user).first()
         if not user_settings:
-            return ('', 404)
-        else:
-            return flask.jsonify(user_settings.serizalize())
-    
+            posted = UserSettings(username=user, signal_priority=5, email_priority=7, ntfy_priority=3)
+            db.session.merge(posted)
+            db.session.commit()
+        return flask.jsonify(user_settings.serizalize())
+
 
 @app.route('/get-dispatch')
 def get_dispatch():
