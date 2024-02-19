@@ -25,6 +25,15 @@ app = flask.Flask("Signal Notification Gateway")
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///sqlite.db"
 db = SQLAlchemy(app)
 
+BAD_DISPATCH_ACCESS_TOKEN = "Invalid or missing dispatch-access-token parameter in URL"
+
+class WebHookPaths(db.Model):
+
+    __tablename__ = "webhook_paths"
+
+    username = Column(String, primary_key=True)
+    path = Column(String, primary_key=True)
+
 class UserSettings(db.Model):
 
     __tablename__ = "user_settings"
@@ -153,6 +162,10 @@ def get_dispatch():
     timeout = flask.request.args.get("timeout") or 5 # timeout in seconds
     timeout = int(timeout)
 
+    dispatch_acces_token = flask.request.args.get("dispatch-access-token") or ""
+    if dispatch_acces_token != app.config["DISPATCH_ACCESS_TOKEN"]:
+        return (BAD_DISPATCH_ACCESS_TOKEN, 401)
+
     if not method:
         return (500, "Missing Dispatch Target (signal|email|phone|ntfy|all|any)")
 
@@ -259,8 +272,9 @@ def confirm_dispatch():
     return ("", 204)
 
 
+@app.route('/smart-send/<path:path>', methods=["POST"])
 @app.route('/smart-send', methods=["POST"])
-def smart_send_to_clients():
+def smart_send_to_clients(path=None):
     '''Send to clients based on querying the LDAP
         requests MAY include:
             - list of usernames under key "users"
@@ -279,6 +293,19 @@ def smart_send_to_clients():
     message = instructions.get("msg")
     title = instructions.get("title")
     method = instructions.get("method")
+
+    # authenticated by access token or webhook path #
+    dispatch_acces_token = flask.request.args.get("dispatch-access-token") or ""
+    print(path)
+    if path:
+        webhook_path = db.session.query(WebHookPaths).filter(WebHookPaths.path==path).first()
+        if webhook_path:
+            users = webhook_path.username
+            groups = None
+        else:
+            return ("Invalid Webhook path", 401)
+    elif dispatch_acces_token != app.config["DISPATCH_ACCESS_TOKEN"]:
+        return (BAD_DISPATCH_ACCESS_TOKEN, 401)
 
     # allow single use string instead of array #
     if type(users) == str:
@@ -346,6 +373,7 @@ def create_app():
         }
         app.config["LDAP_ARGS"] = ldap_args
         app.config["SETTINGS_ACCESS_TOKEN"] = os.environ["SETTINGS_ACCESS_TOKEN"]
+        app.config["DISPATCH_ACCESS_TOKEN"] = os.environ["DISPATCH_ACCESS_TOKEN"]
 
 if __name__ == "__main__":
 
@@ -363,6 +391,7 @@ if __name__ == "__main__":
     parser.add_argument('--ldap-manager-password')
 
     parser.add_argument('--settings-access-token')
+    parser.add_argument('--dispatch-access-token')
 
     args = parser.parse_args()
 
@@ -376,6 +405,7 @@ if __name__ == "__main__":
     app.config["LDAP_NO_READ_ENV"] = True
 
     app.config["SETTINGS_ACCESS_TOKEN"] = args.settings_access_token
+    app.config["DISPATCH_ACCESS_TOKEN"] = args.dispatch_access_token
 
     if not any([value is None for value in ldap_args.values()]):
         app.config["LDAP_ARGS"] = ldap_args

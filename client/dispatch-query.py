@@ -12,7 +12,7 @@ import json
 HTTP_NOT_FOUND = 404
 
 DISPATCH_SERVER = None
-AUTH = None
+DISPATCH_ACCESS_TOKEN = None
 
 def debug_send(uuid, data, fail_it=False):
     '''Dummy function to print and ack a dispatch for debugging'''
@@ -92,7 +92,7 @@ def report_failed_dispatch(uuid, error):
     '''Inform the server that the dispatch has failed'''
 
     payload = [{ "uuid" : uuid, "error" : error }]
-    response = requests.post(DISPATCH_SERVER + "/report-dispatch-failed", json=payload, auth=AUTH)
+    response = requests.post(DISPATCH_SERVER + "/report-dispatch-failed", json=payload)
 
     if response.status_code not in [200, 204]:
         print("Failed to report back failed dispatch for {} ({})".format(
@@ -102,7 +102,7 @@ def confirm_dispatch(uuid):
     '''Confirm to server that message has been dispatched and can be removed'''
 
     payload = [{ "uuid" : uuid }]
-    response = requests.post(DISPATCH_SERVER + "/confirm-dispatch", json=payload, auth=AUTH)
+    response = requests.post(DISPATCH_SERVER + "/confirm-dispatch", json=payload)
 
     if response.status_code not in [200, 204]:
         print("Failed to confirm dispatch with server for {} ({})".format(
@@ -115,8 +115,7 @@ if __name__ == "__main__":
                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('--dispatch-server')
-    parser.add_argument('--dispatch-user')
-    parser.add_argument('--dispatch-password')
+    parser.add_argument('--dispatch-access-token')
 
     parser.add_argument('--ntfy-api-server')
     parser.add_argument('--ntfy-api-token')
@@ -136,12 +135,11 @@ if __name__ == "__main__":
 
 
     dispatch_server = args.dispatch_server or os.environ.get("DISPATCH_SERVER")
-    dispatch_user = args.dispatch_user or os.environ.get("DISPATCH_USER")
-    dispatch_password = args.dispatch_password or os.environ.get("DISPATCH_PASSWORD")
+    dispatch_access_token = args.dispatch_access_token or os.environ.get("DISPATCH_ACCESS_TOKEN")
 
     # set dispatch server & authentication global #
     DISPATCH_SERVER = dispatch_server
-    AUTH = (dispatch_user, dispatch_password)
+    DISPATCH_ACCESS_TOKEN = dispatch_access_token
 
     ntfy_api_server = args.ntfy_api_server or os.environ.get("NTFY_API_SERVER")
     ntfy_api_token = args.ntfy_api_token or os.environ.get("NTFY_API_TOKEN")
@@ -159,7 +157,8 @@ if __name__ == "__main__":
     while args.loop or first_run:
 
         # request dispatches #
-        response = requests.get(dispatch_server + "/get-dispatch?method=all&timeout=0", auth=AUTH)
+        response = requests.get(dispatch_server + 
+            "/get-dispatch?method=all&timeout=0&dispatch-access-token={}".format(DISPATCH_ACCESS_TOKEN))
 
         # check status #
         if response.status_code == HTTP_NOT_FOUND:

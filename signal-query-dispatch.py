@@ -51,8 +51,8 @@ if __name__ == "__main__":
         signal_cli_bin = args.signal_cli_bin
 
     # request dispatches #
-    response = requests.get(args.target + "/get-dispatch?method={}".format(args.method),
-                            auth=(args.user, args.password))
+    response = requests.get(args.target +
+            "/get-dispatch?method={}&dispatch-access-token={}".format(args.method), args.password)
 
     # check status #
     if response.status_code == HTTP_NOT_FOUND:
