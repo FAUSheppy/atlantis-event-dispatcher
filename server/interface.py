@@ -162,10 +162,16 @@ def get_dispatch():
     lines_timeout = lines_unfiltered.filter(DispatchObject.timestamp < timeout_cutoff_timestamp)
 
     if method != "all":
+
         dispatch_objects = lines_timeout.filter(DispatchObject.method==method).all()
-        user_settings = db.session.query(UserSettings).filter(UserSettings.username==user)
+
+        # get matchin "any" methods #
         if method == user_settings.get_highest_prio_method():
-            dispatch_objects += lines_timeout.filter(DispatchObject.method=="any").all()
+            dispatch_objects_any = lines_timeout.filter(DispatchObject.method=="any").all()
+            for d in dispatch_objects_any:
+                user_settings = db.session.query(UserSettings).filter(UserSettings.username==d.username).first()
+                if user_settings and user_settings.get_highest_prio_method() == method:
+                    dispatch_objects += d
     else:
         dispatch_objects = lines_timeout.all()
 
