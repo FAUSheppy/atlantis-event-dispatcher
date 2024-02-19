@@ -123,6 +123,41 @@ def get_dispatch_status():
     else:
         return ("Waiting for dispatch", 200)
 
+
+@app.route('/webhooks', methods=["GET", "POST", "DELETE"])
+def webhooks():
+
+    # check static access token #
+    token = flask.request.args.get("token")
+    if token != app.config["SETTINGS_ACCESS_TOKEN"]:
+        return ("SETTINGS_ACCESS_TOKEN incorrect. Refusing to access webhooks", 401)
+
+    user = flask.request.args.get("user")
+    if not user:
+        return ("Missing user paramter in URL", 500)
+
+    if flask.request.method == "POST":
+        posted = WebHookPaths(username=user, path=secrets.token_urlsafe(20))
+        db.session.merge(posted)
+        db.session.commit()
+        return ("", 204)
+    elif flask.request.method == "GET":
+        webhooks = db.session.query(WebHookPaths).filter(WebHookPaths.username==user).all()
+        if not webhooks:
+            return flask.jsonify([])
+        else:
+            return flask.jsonify([ wh.path for wh in webhooks])
+    elif flask.request.method == "DELETE":
+        path = flask.request.json["path"]
+        webhook_to_be_deleted = db.session.query(WebHookPaths).filter(WebHookPaths.username==user,
+                                    WebHookPaths.path==path).first()
+        if not webhook_to_be_deleted:
+            return ("Webhook to be deleted was not found ({}, {})".format(user, path), 404)
+        else:
+            db.session.delete(webhook_to_be_deleted)
+            db.session.commit()
+            return ("", 204)
+
 @app.route('/settings', methods=["GET", "POST"])
 def settings():
 
