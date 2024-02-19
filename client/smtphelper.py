@@ -5,7 +5,7 @@ from email.mime.multipart import MIMEMultipart
 def smtp_send(server, port, user, password, recipient, subject, body):
 
     # Email and password for authentication
-    sender_email = f'{user}@{server}'
+    sender_email = user
     sender_password = password
     
     # Recipient email address
