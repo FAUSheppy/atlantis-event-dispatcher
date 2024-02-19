@@ -167,7 +167,7 @@ def get_dispatch():
 
         dispatch_objects_any = lines_timeout.filter(DispatchObject.method=="any").all()
         for d in dispatch_objects_any:
-            user_str = str(d.usernames, "utf-8")
+            user_str = str(d.username, "utf-8")
             user_settings = db.session.query(UserSettings).filter(UserSettings.username==user_str).first()
             if user_settings and user_settings.get_highest_prio_method() == method:
                 dispatch_objects += [d]
