@@ -168,7 +168,9 @@ def get_dispatch():
 
     # TODO THIS IS THE NEW MASTER PART
     if method and method != "signal":
-        print([ d.serialize() for d in dispatch_objects])
+        debug = [ d.serialize() for d in dispatch_objects]
+        if debug:
+            print(debug)
         return flask.jsonify([ d.serialize() for d in dispatch_objects])
     else:
         # TODO THIS PART WILL BE REMOVED ##
