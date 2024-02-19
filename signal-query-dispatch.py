@@ -24,8 +24,7 @@ def report_dispatch_error(target, uid, error):
 def confirm_dispatch(target, uid):
     '''Confirm to server that message has been dispatched and can be removed'''
 
-    response = requests.post(target + "/confirm-dispatch", json=[{ "uuid" : uid }],
-                                auth=(args.user, args.password))
+    response = requests.post(target + "/confirm-dispatch", json=[{ "uuid" : uid }])
 
     if response.status_code not in [200, 204]:
         print("Failed to confirm disptach with server for {} ({})".format(
@@ -52,7 +51,7 @@ if __name__ == "__main__":
 
     # request dispatches #
     response = requests.get(args.target +
-            "/get-dispatch?method={}&dispatch-access-token={}".format(args.method), args.password)
+            "/get-dispatch?method={}&dispatch-access-token={}".format(args.method, args.password))
 
     # check status #
     if response.status_code == HTTP_NOT_FOUND:
