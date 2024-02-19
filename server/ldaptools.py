@@ -44,7 +44,7 @@ def _person_from_search_result(cn, entry):
 
     username = entry.get("uid", [None])[0]
     name = entry.get("firstName", [None])[0]
-    email = entry.get("email", [None])[0]
+    email = entry.get("mail", [None])[0]
     phone = entry.get("telephoneNumber", [None])[0]
 
     return Person(cn, username, name, email, phone)
