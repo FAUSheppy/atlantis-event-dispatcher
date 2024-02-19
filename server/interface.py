@@ -162,7 +162,10 @@ def get_dispatch():
     lines_timeout = lines_unfiltered.filter(DispatchObject.timestamp < timeout_cutoff_timestamp)
 
     if method != "all":
-        dispatch_objects = lines_timeout.filter(DispatchObject.method == method).all()
+        dispatch_objects = lines_timeout.filter(DispatchObject.method==method).all()
+        user_settings = db.session.query(UserSettings).filter(UserSettings.user==user)
+        if method == user_settings.get_highest_prio_method():
+            dispatch_objects += lines_timeout.filter(DispatchObject.method=="any").all()
     else:
         dispatch_objects = lines_timeout.all()
 
@@ -184,6 +187,10 @@ def get_dispatch():
             else:
                 dispatch_by_person[dobj.username] += "\n{}".format(dobj.message)
                 dispatch_secrets.append(dobj.dispatch_secret)
+
+        # legacy hack #
+        if method == "any":
+            method = "signal"
 
         response = [ { "person" : tupel[0].decode("utf-8"),
                         "message" : tupel[1],
