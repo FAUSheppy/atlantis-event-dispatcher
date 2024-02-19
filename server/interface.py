@@ -141,6 +141,7 @@ def settings():
             posted = UserSettings(username=user, signal_priority=5, email_priority=7, ntfy_priority=3)
             db.session.merge(posted)
             db.session.commit()
+            user_settings = posted
         return flask.jsonify(user_settings.serizalize())
 
 
