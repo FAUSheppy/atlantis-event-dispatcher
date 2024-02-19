@@ -24,7 +24,8 @@ def debug_send(uuid, data, fail_it=False):
         confirm_dispatch(uuid)
 
 
-def email_send(dispatch_uuid, email_address, message, smtp_target, smtp_user, smtp_pass):
+def email_send(dispatch_uuid, email_address, message, smtp_target,
+                smtp_target_port, smtp_user, smtp_pass):
     '''Send message via email'''
   
     if not email_address:
@@ -33,7 +34,7 @@ def email_send(dispatch_uuid, email_address, message, smtp_target, smtp_user, sm
         return
 
     subject = "Atlantis Dispatch"
-    smtphelper.smtp_send(smtp_target, smtp_user, smtp_pass, email_address,
+    smtphelper.smtp_send(smtp_target, smtp_target_port, smtp_user, smtp_pass, email_address,
                             subject, message)
     confirm_dispatch(dispatch_uuid)
 
@@ -127,6 +128,7 @@ if __name__ == "__main__":
     parser.add_argument('--smtp-target')
     parser.add_argument('--smtp-user')
     parser.add_argument('--smtp-pass')
+    parser.add_argument('--smtp-port', type=int)
 
     parser.add_argument('--loop', default=True, action=argparse.BooleanOptionalAction)
 
@@ -151,6 +153,7 @@ if __name__ == "__main__":
     smtp_target = args.smtp_target or os.environ.get("SMTP_TARGET")
     smtp_user = args.smtp_user or os.environ.get("SMTP_USER")
     smtp_pass = args.smtp_pass or os.environ.get("SMTP_PASS")
+    smtp_port = args.smtp_port or os.environ.get("SMTP_PORT")
 
     first_run = True
     while args.loop or first_run:
@@ -192,7 +195,8 @@ if __name__ == "__main__":
                 ntfy_send(dispatch_uuid, user_topic, title, message,
                                 ntfy_push_target, ntfy_user, ntfy_pass)
             elif method == "email":
-                email_send(dispatch_uuid, email_address, message, smtp_target, smtp_user, smtp_pass)
+                email_send(dispatch_uuid, email_address, message, smtp_target,
+                                smtp_port, smtp_user, smtp_pass)
             elif method == "debug":
                 debug_send(dispatch_uuid, entry)
             elif method == "debug-fail":

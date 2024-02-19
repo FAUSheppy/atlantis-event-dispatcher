@@ -2,7 +2,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-def smtp_send(server, user, password, recipient, subject, body):
+def smtp_send(server, port, user, password, recipient, subject, body):
 
     # Email and password for authentication
     sender_email = f'{user}@{server}'
@@ -13,7 +13,7 @@ def smtp_send(server, user, password, recipient, subject, body):
     
     # SMTP server details
     smtp_server = server
-    smtp_port = 25  # Default port for TLS connection
+    smtp_port = port or 25
     
     # Create a message
     message = MIMEMultipart()
