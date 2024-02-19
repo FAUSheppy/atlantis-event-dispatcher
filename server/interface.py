@@ -163,7 +163,7 @@ def get_dispatch():
 
     if method != "all":
         dispatch_objects = lines_timeout.filter(DispatchObject.method==method).all()
-        user_settings = db.session.query(UserSettings).filter(UserSettings.user==user)
+        user_settings = db.session.query(UserSettings).filter(UserSettings.username==user)
         if method == user_settings.get_highest_prio_method():
             dispatch_objects += lines_timeout.filter(DispatchObject.method=="any").all()
     else:
