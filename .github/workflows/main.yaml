@@ -35,7 +35,7 @@ jobs:
           context: ./server/
           platforms: linux/amd64
           push: true
-          tags: "${{ secrets.REGISTRY }}/athq/event-dispatcher:latest"
+          tags: "${{ secrets.REGISTRY }}/atlantishq/event-dispatcher:latest"
       -
         name: Build and push event-dispatcher
         uses: docker/build-push-action@v3
@@ -43,4 +43,4 @@ jobs:
           context: ./client/
           platforms: linux/amd64
           push: true
-          tags: "${{ secrets.REGISTRY }}/athq/event-dispatcher-worker:latest"
+          tags: "${{ secrets.REGISTRY }}/atlantishq/event-dispatcher-worker:latest"
