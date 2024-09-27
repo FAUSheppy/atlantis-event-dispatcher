@@ -5,6 +5,8 @@ on:
     branches:
       - "master"
       - "ldap-ng-dev"
+  schedule:
+      - cron: "0 2 * * 0"
 
 jobs:
   docker:
