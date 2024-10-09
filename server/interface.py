@@ -395,6 +395,12 @@ def save_in_dispatch_queue(persons, title, message, method):
 
     return dispatch_secrets
 
+@app.route("/")
+@app.route("/health")
+def health():
+
+    return ("Not Iplemented, but at least it's running", 200)
+
 def create_app():
 
     db.create_all()
