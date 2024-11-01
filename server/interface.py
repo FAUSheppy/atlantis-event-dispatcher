@@ -376,9 +376,7 @@ def save_in_dispatch_queue(persons, title, message, method):
         # this secret will be needed to confirm the message as dispatched #
         dispatch_secret = secrets.token_urlsafe(32)
 
-        # TODO fix this
-        master_method = "signal"
-
+        master_method = "any"
         obj = DispatchObject(username=p.username,
                         phone=p.phone,
                         email=p.email,
