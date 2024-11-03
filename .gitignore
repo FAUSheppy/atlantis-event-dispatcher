@@ -5,3 +5,5 @@ instance/
 __pycache__/
 signal_targets.txt
 sqlite.db
+substitutions.yaml
+test.env

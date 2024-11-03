@@ -27,6 +27,13 @@ db = SQLAlchemy(app)
 
 BAD_DISPATCH_ACCESS_TOKEN = "Invalid or missing dispatch-access-token parameter in URL"
 
+def _apply_substitution(string):
+
+    for replace, match in app.config["SUBSTITUTIONS"].items():
+        string = string.replace(match, replace)
+
+    return string
+
 class WebHookPaths(db.Model):
 
     __tablename__ = "webhook_paths"
@@ -85,8 +92,8 @@ class DispatchObject(db.Model):
             "timestamp" : self.timestamp,
             "phone" : self.phone,
             "email" : self.email,
-            "title" : self.title,
-            "message" : self.message,
+            "title" : _apply_substitution(self.title),
+            "message" : _apply_substitution(self.message),
             "uuid" : self.dispatch_secret,
             "method" : self.method,
             "error" : self.dispatch_error,
@@ -413,6 +420,13 @@ def create_app():
         app.config["LDAP_ARGS"] = ldap_args
         app.config["SETTINGS_ACCESS_TOKEN"] = os.environ["SETTINGS_ACCESS_TOKEN"]
         app.config["DISPATCH_ACCESS_TOKEN"] = os.environ["DISPATCH_ACCESS_TOKEN"]
+
+    substitution_config_file = app.config.get("SUBSTITUTION_MAP") or "substitutions.yaml"
+    app.config["SUBSTITUTIONS"] = {}
+    if os.path.isfile(substitution_config_file):
+        with open(substitution_config_file) as f:
+            app.config["SUBSTITUTIONS"] = yaml.safe_load(f)
+
 
 if __name__ == "__main__":
 
