@@ -30,6 +30,9 @@ BAD_DISPATCH_ACCESS_TOKEN = "Invalid or missing dispatch-access-token parameter 
 
 def _apply_substitution(string):
 
+    if not string:
+        return string
+
     for replace, match in app.config["SUBSTITUTIONS"].items():
         string = string.replace(match, replace)
 
