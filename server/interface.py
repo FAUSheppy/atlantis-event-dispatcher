@@ -7,6 +7,7 @@ import subprocess
 import os
 import datetime
 import secrets
+import yaml
 
 import ldaptools
 import messagetools
@@ -421,11 +422,13 @@ def create_app():
         app.config["SETTINGS_ACCESS_TOKEN"] = os.environ["SETTINGS_ACCESS_TOKEN"]
         app.config["DISPATCH_ACCESS_TOKEN"] = os.environ["DISPATCH_ACCESS_TOKEN"]
 
-    substitution_config_file = app.config.get("SUBSTITUTION_MAP") or "substitutions.yaml"
+    substitution_config_file = os.environ.get("SUBSTITUTION_MAP") or "substitutions.yaml"
     app.config["SUBSTITUTIONS"] = {}
     if os.path.isfile(substitution_config_file):
         with open(substitution_config_file) as f:
             app.config["SUBSTITUTIONS"] = yaml.safe_load(f)
+
+    print("Loaded subs:", substitution_config_file, app.config["SUBSTITUTIONS"], file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 python-ldap
+pyyaml
 flask
 flask-sqlalchemy
 sqlalchemy

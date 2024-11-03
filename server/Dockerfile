@@ -14,7 +14,7 @@ RUN python3 -m pip install --no-cache-dir --break-system-packages -r req.txt
 
 # precreate database directory for mount (will otherwise be created at before_first_request)
 COPY ./ .
-RUN mkdir /app/instance/
+RUN mkdir -p /app/instance/
 
 EXPOSE 5000/tcp
 
