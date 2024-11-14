@@ -180,7 +180,7 @@ def downtime():
     if flask.request.method == "DELETE":
         app.config["DOWNTIME"] = datetime.datetime.now()
     elif flask.request.method == "POST":
-        minutes = flask.request.args.get("minutes")
+        minutes = int(flask.request.args.get("minutes") or 5)
         app.config["DOWNTIME"] = datetime.datetime.now() + datetime.timedelta(minutes=minutes)
 
 
