@@ -169,6 +169,21 @@ def webhooks():
             db.session.commit()
             return ("", 204)
 
+@app.route('/downtime', methods=["DELETE","POST"])
+def downtime():
+
+    # check static access token #
+    token = flask.request.args.get("token")
+    if token != app.config["SETTINGS_ACCESS_TOKEN"]:
+        return ("SETTINGS_ACCESS_TOKEN incorrect. Refusing to access downtime settings", 401)
+
+    if flask.request.method == "DELETE":
+        app.config["DOWNTIME"] = datetime.datetime.now()
+    elif flask.request.method == "POST":
+        minutes = flask.request.args.get("minutes")
+        app.config["DOWNTIME"] = datetime.datetime.now() + datetime.timedelta(minutes=minutes)
+
+
 @app.route('/settings', methods=["GET", "POST"])
 def settings():
 
@@ -332,6 +347,11 @@ def smart_send_to_clients(path=None):
             - supported struct of type "ICINGA|ZABBIX|GENERIC" (see docs) in field "data"
     '''
 
+    if app.config["DOWNTIME"] > datetime.datetime.now():
+        print("Ignoring because of Downtime:", title, message, user)
+        print("Downtime until", app.config["DOWNTIME"].isoformat())
+        return ("Ignored because of Downtime", 200)
+
     instructions = flask.request.json
 
     users = instructions.get("users")
@@ -433,6 +453,8 @@ def create_app():
 
     print("Loaded subs:", substitution_config_file, app.config["SUBSTITUTIONS"], file=sys.stderr)
 
+    # set small downtime #
+    app.config["DOWNTIME"] = datetime.datetime.now() + datetime.timedelta(minutes=1)
 
 if __name__ == "__main__":
 
