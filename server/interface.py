@@ -169,7 +169,7 @@ def webhooks():
             db.session.commit()
             return ("", 204)
 
-@app.route('/downtime', methods=["DELETE","POST"])
+@app.route('/downtime', methods=["GET", "DELETE","POST"])
 def downtime():
 
     # check static access token #
@@ -179,11 +179,18 @@ def downtime():
 
     if flask.request.method == "DELETE":
         app.config["DOWNTIME"] = datetime.datetime.now()
+        return ('Downtime successfully disabled', 200)
     elif flask.request.method == "POST":
         minutes = int(flask.request.args.get("minutes") or 5)
         app.config["DOWNTIME"] = datetime.datetime.now() + datetime.timedelta(minutes=minutes)
-
-    return ('', 204)
+        return ('Downtime set to {}'.format(app.config["DOWNTIME"].isoformat(), 204))
+    elif flask.request.method == "GET":
+        dt = app.config["DOWNTIME"]
+        if dt < datetime.datetime.now():
+            return ("No Downtime set at the moment", 200)
+        else:
+            delta = int((dt - datetime.datetime.now()).total_seconds()/60)
+            return ("Downtime set for {}m until {}".format(delta, dt.isoformat()))
 
 
 @app.route('/settings', methods=["GET", "POST"])
