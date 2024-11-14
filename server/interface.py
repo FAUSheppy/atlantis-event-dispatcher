@@ -347,11 +347,6 @@ def smart_send_to_clients(path=None):
             - supported struct of type "ICINGA|ZABBIX|GENERIC" (see docs) in field "data"
     '''
 
-    if app.config["DOWNTIME"] > datetime.datetime.now():
-        print("Ignoring because of Downtime:", title, message, user)
-        print("Downtime until", app.config["DOWNTIME"].isoformat())
-        return ("Ignored because of Downtime", 200)
-
     instructions = flask.request.json
 
     users = instructions.get("users")
@@ -359,6 +354,11 @@ def smart_send_to_clients(path=None):
     message = instructions.get("msg")
     title = instructions.get("title")
     method = instructions.get("method")
+
+    if app.config["DOWNTIME"] > datetime.datetime.now():
+        print("Ignoring because of Downtime:", title, message, user)
+        print("Downtime until", app.config["DOWNTIME"].isoformat())
+        return ("Ignored because of Downtime", 200)
 
     # authenticated by access token or webhook path #
     dispatch_acces_token = flask.request.args.get("dispatch-access-token") or ""
