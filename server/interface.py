@@ -187,10 +187,11 @@ def downtime():
     elif flask.request.method == "GET":
         dt = app.config["DOWNTIME"]
         if dt < datetime.datetime.now():
-            return ("No Downtime set at the moment", 200)
+            return flask.jsonify({"title" : "No Downtime set at the moment", "message" : ""})
         else:
             delta = int((dt - datetime.datetime.now()).total_seconds()/60)
-            return ("Downtime set for {}m until {}".format(delta, dt.isoformat()))
+            return flask.jsonify({"title" : "Downtime set for {}m until {}".format(delta, dt.isoformat()),
+                     "message" : ""})
 
 
 @app.route('/settings', methods=["GET", "POST"])
