@@ -358,8 +358,8 @@ def smart_send_to_clients(path=None):
     method = instructions.get("method")
 
     if app.config["DOWNTIME"] > datetime.datetime.now():
-        print("Ignoring because of Downtime:", title, message, users)
-        print("Downtime until", app.config["DOWNTIME"].isoformat())
+        print("Ignoring because of Downtime:", title, message, users, file=sys.stderr)
+        print("Downtime until", app.config["DOWNTIME"].isoformat(), file=sys.stderr)
         return ("Ignored because of Downtime", 200)
 
     # authenticated by access token or webhook path #
