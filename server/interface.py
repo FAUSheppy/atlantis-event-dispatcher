@@ -183,6 +183,8 @@ def downtime():
         minutes = int(flask.request.args.get("minutes") or 5)
         app.config["DOWNTIME"] = datetime.datetime.now() + datetime.timedelta(minutes=minutes)
 
+    return ('', 204)
+
 
 @app.route('/settings', methods=["GET", "POST"])
 def settings():
