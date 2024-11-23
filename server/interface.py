@@ -358,13 +358,23 @@ def smart_send_to_clients(path=None):
     '''
 
     if flask.request.headers.get("opensearch"):
+
         instructions = {}
-        users = flask.request.headers.get("opensearch-users").split(OPENSEARCH_HEADER_SEPERATOR)
-        groups = flask.request.headers.get("opensearch-groups").split(OPENSEARCH_HEADER_SEPERATOR)
-        message = request.get_data(as_text=True)
+        users = flask.request.headers.get("opensearch-users")
+        groups = flask.request.headers.get("opensearch-groups")
+
+        if groups and OPENSEARCH_HEADER_SEPERATOR in groups:
+            groups = groups.split(OPENSEARCH_HEADER_SEPERATOR)
+
+        if users and OPENSEARCH_HEADER_SEPERATOR in users:
+            users = users.split(OPENSEARCH_HEADER_SEPERATOR)
+
+        message = flask.request.get_data(as_text=True)
         title = "Opensearch Alert"
         method = None
+
     else:
+
         instructions = flask.request.json
         users = instructions.get("users")
         groups = instructions.get("groups")
