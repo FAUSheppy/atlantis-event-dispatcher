@@ -20,7 +20,7 @@ import sqlalchemy
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql.expression import func
 
-
+OPENSEARCH_HEADER_SEPERATOR = ","
 HOST = "icinga.atlantishq.de"
 app = flask.Flask("Signal Notification Gateway")
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///sqlite.db"
@@ -357,13 +357,20 @@ def smart_send_to_clients(path=None):
             - supported struct of type "ICINGA|ZABBIX|GENERIC" (see docs) in field "data"
     '''
 
-    instructions = flask.request.json
-
-    users = instructions.get("users")
-    groups = instructions.get("groups")
-    message = instructions.get("msg")
-    title = instructions.get("title")
-    method = instructions.get("method")
+    if flask.request.headers.get("opensearch"):
+        instructions = {}
+        users = flask.request.headers.get("opensearch-users").split(OPENSEARCH_HEADER_SEPERATOR)
+        groups = flask.request.headers.get("opensearch-groups").split(OPENSEARCH_HEADER_SEPERATOR)
+        message = request.get_data(as_text=True)
+        title = "Opensearch Alert"
+        method = None
+    else:
+        instructions = flask.request.json
+        users = instructions.get("users")
+        groups = instructions.get("groups")
+        message = instructions.get("msg")
+        title = instructions.get("title")
+        method = instructions.get("method")
 
     if app.config["DOWNTIME"] > datetime.datetime.now():
         print("Ignoring because of Downtime:", title, message, users, file=sys.stderr)
