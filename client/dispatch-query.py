@@ -58,6 +58,8 @@ def ntfy_send(dispatch_uuid, user_topic, title, message, ntfy_push_target, ntfy_
     '''Send message via NTFY topic'''
 
     # limit message length and title #
+    title = title or ""
+    message = message or ""
     message = message[:1024]
     title = title[:512]
 
