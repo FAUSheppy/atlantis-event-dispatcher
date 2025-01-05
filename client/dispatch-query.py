@@ -57,6 +57,10 @@ def ntfy_api_get_topic(ntfy_api_server, ntfy_api_token, username):
 def ntfy_send(dispatch_uuid, user_topic, title, message, ntfy_push_target, ntfy_user, ntfy_pass):
     '''Send message via NTFY topic'''
 
+    # limit message length and title #
+    message = message[:1024]
+    title = title[:512]
+
     if not user_topic:
         report_failed_dispatch(dispatch_uuid, "No user topic")
         return
