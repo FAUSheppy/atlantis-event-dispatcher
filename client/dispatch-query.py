@@ -78,6 +78,9 @@ def ntfy_send(dispatch_uuid, user_topic, title, message, ntfy_push_target, ntfy_
         # send #
         r = requests.post(ntfy_push_target, auth=(ntfy_user, ntfy_pass), json=payload)
         print(r.status_code, r.text, payload)
+        if r.status_code == 429: # rate-limit
+            time.sleep(60)
+
         r.raise_for_status()
 
         # talk to dispatch #
