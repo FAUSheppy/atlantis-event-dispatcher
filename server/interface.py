@@ -84,6 +84,7 @@ class DispatchObject(db.Model):
     title = Column(String)
     message = Column(String, primary_key=True)
     method = Column(String)
+    link = Column(String)
 
     dispatch_secret = Column(String)
     dispatch_error = Column(String)
@@ -98,6 +99,7 @@ class DispatchObject(db.Model):
             "email" : self.email,
             "title" : _apply_substitution(self.title),
             "message" : _apply_substitution(self.message),
+            "link" : self.link,
             "uuid" : self.dispatch_secret,
             "method" : self.method,
             "error" : self.dispatch_error,
@@ -378,9 +380,10 @@ def smart_send_to_clients(path=None):
         instructions = flask.request.json
         users = instructions.get("users")
         groups = instructions.get("groups")
-        message = instructions.get("msg")
+        message = instructions.get("msg") or instructions.get("message")
         title = instructions.get("title")
         method = instructions.get("method")
+        link = instructions.get("link")
 
     if app.config["DOWNTIME"] > datetime.datetime.now():
         print("Ignoring because of Downtime:", title, message, users, file=sys.stderr)
@@ -421,7 +424,7 @@ def smart_send_to_clients(path=None):
     else:
         persons = ldaptools.select_targets(users, groups, app.config["LDAP_ARGS"])
 
-    dispatch_secrets = save_in_dispatch_queue(persons, title, message, method)
+    dispatch_secrets = save_in_dispatch_queue(persons, title, message, method, link)
     return flask.jsonify(dispatch_secrets)
 
 
@@ -445,6 +448,7 @@ def save_in_dispatch_queue(persons, title, message, method):
                         timestamp=datetime.datetime.now().timestamp(),
                         dispatch_secret=dispatch_secret,
                         title=title,
+                        link=link,
                         message=message)
 
         db.session.merge(obj)
