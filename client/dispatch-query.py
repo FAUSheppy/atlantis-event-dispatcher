@@ -27,7 +27,7 @@ def debug_send(uuid, data, fail_it=False):
 def email_send(dispatch_uuid, email_address, message, smtp_target,
                 smtp_target_port, smtp_user, smtp_pass):
     '''Send message via email'''
-  
+
     if not email_address:
         print("Missing E-Mail Address for STMP send", file=sys.stderr)
         report_failed_dispatch(dispatch_uuid, "Missing email-field in dispatch infor")
@@ -54,8 +54,16 @@ def ntfy_api_get_topic(ntfy_api_server, ntfy_api_token, username):
         print(r.text)
         return r.json().get("topic")
 
-def ntfy_send(dispatch_uuid, user_topic, title, message, ntfy_push_target, ntfy_user, ntfy_pass):
+def ntfy_send(dispatch_uuid, user_topic, title, message, link,
+                ntfy_push_target, ntfy_user, ntfy_pass):
     '''Send message via NTFY topic'''
+
+    # check message for links #
+    if not link:
+        pattern = r"https:\/\/[^\s]+"
+        match = re.search(pattern, text)
+        if match:
+            link = match.group(0)
 
     # limit message length and title #
     title = title or ""
@@ -63,11 +71,14 @@ def ntfy_send(dispatch_uuid, user_topic, title, message, ntfy_push_target, ntfy_
     message = message[:1024]
     title = title[:512]
 
+
     if not user_topic:
         report_failed_dispatch(dispatch_uuid, "No user topic")
         return
 
     try:
+
+
 
         # build message #
         payload = {
@@ -77,7 +88,7 @@ def ntfy_send(dispatch_uuid, user_topic, title, message, ntfy_push_target, ntfy_
             #"tags" : [],
             "priority" : 4,
             #"attach" : None,
-            "click" : "https://vid.pr0gramm.com/2022/11/06/ed66c8c5a9cd1a3b.mp4",
+            "click" : link,
             #"actions" : []
         }
 
@@ -140,7 +151,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--loop', default=True, action=argparse.BooleanOptionalAction)
 
-    args = parser.parse_args() 
+    args = parser.parse_args()
 
 
     dispatch_server = args.dispatch_server or os.environ.get("DISPATCH_SERVER")
@@ -166,7 +177,7 @@ if __name__ == "__main__":
     while args.loop or first_run:
 
         # request dispatches #
-        response = requests.get(dispatch_server + 
+        response = requests.get(dispatch_server +
             "/get-dispatch?method=all&timeout=0&dispatch-access-token={}".format(DISPATCH_ACCESS_TOKEN))
 
         # check status #
@@ -190,6 +201,7 @@ if __name__ == "__main__":
             method = entry["method"]
             message = entry["message"]
             title = entry.get("title")
+            link = entry.get("link")
 
             # method dependent fields #
             phone = entry.get("phone")
@@ -200,7 +212,7 @@ if __name__ == "__main__":
                 pass
             elif method == "ntfy":
                 user_topic = ntfy_api_get_topic(ntfy_api_server, ntfy_api_token, user)
-                ntfy_send(dispatch_uuid, user_topic, title, message,
+                ntfy_send(dispatch_uuid, user_topic, title, message, link,
                                 ntfy_push_target, ntfy_user, ntfy_pass)
             elif method == "email":
                 email_send(dispatch_uuid, email_address, message, smtp_target,
@@ -216,6 +228,6 @@ if __name__ == "__main__":
         # wait a moment #
         if args.loop:
             time.sleep(5)
-        
+
         # handle non-loop runs #
         first_run = False
