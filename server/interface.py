@@ -389,6 +389,9 @@ def smart_send_to_clients(path=None):
 
     # authenticated by access token or webhook path #
     dispatch_acces_token = flask.request.args.get("dispatch-access-token") or ""
+    if not dispatch_acces_token:
+        dispatch_acces_token = flask.request.headers.get("Dispatcher-Token") or ""
+
     print(path)
     if path:
         webhook_path = db.session.query(WebHookPaths).filter(WebHookPaths.path==path).first()
