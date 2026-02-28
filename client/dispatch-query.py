@@ -62,7 +62,7 @@ def ntfy_send(dispatch_uuid, user_topic, title, message, link,
     # check message for links #
     if not link:
         pattern = r"https:\/\/[^\s]+"
-        match = re.search(pattern, text)
+        match = re.search(pattern, message)
         if match:
             link = match.group(0)
 
