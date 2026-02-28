@@ -22,8 +22,8 @@ from sqlalchemy.sql.expression import func
 
 OPENSEARCH_HEADER_SEPERATOR = ","
 HOST = "icinga.atlantishq.de"
-app = flask.Flask("Signal Notification Gateway")
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///sqlite.db"
+app = flask.Flask("Atlantis Notification Gateway & Dispatcher")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DB_URL") or "sqlite:///sqlite.db"
 db = SQLAlchemy(app)
 
 BAD_DISPATCH_ACCESS_TOKEN = "Invalid or missing dispatch-access-token parameter in URL"
