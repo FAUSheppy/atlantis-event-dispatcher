@@ -385,7 +385,7 @@ def smart_send_to_clients(path=None):
     return flask.jsonify(dispatch_secrets)
 
 
-def save_in_dispatch_queue(persons, title, message, method):
+def save_in_dispatch_queue(persons, title, message, method, link=""):
 
 
     dispatch_secrets = []
