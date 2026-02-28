@@ -50,15 +50,13 @@ class UserSettings(db.Model):
     __tablename__ = "user_settings"
 
     username = Column(String, primary_key=True)
-    signal_priority = Column(Integer)
+    signal_priority = Column(Integer) # legacy, no longer used
     email_priority = Column(Integer)
     ntfy_priority = Column(Integer)
 
     def get_highest_prio_method(self):
 
-        if self.signal_priority >= max(self.email_priority, self.ntfy_priority):
-            return "signal"
-        elif self.email_priority >= max(self.signal_priority, self.ntfy_priority):
+        if self.email_priority >= self.ntfy_priority:
             return "email"
         else:
             return "ntfy"
@@ -66,7 +64,6 @@ class UserSettings(db.Model):
     def serizalize(self):
         return {
             "username" : self.username,
-            "signal_priority" : self.signal_priority,
             "email_priority" : self.email_priority,
             "ntfy_priority" : self.ntfy_priority,
         }
@@ -114,9 +111,7 @@ class DispatchObject(db.Model):
             user_settings = db.session.query(UserSettings).filter(
                                 UserSettings.username == ret["username"]).first()
 
-            if not user_settings and self.phone:
-                ret["method"] = "signal"
-            elif not user_settings and self.email:
+            if not user_settings and self.email:
                 ret["method"] = "email"
             elif user_settings:
                 ret["method"] = user_settings.get_highest_prio_method()
@@ -210,7 +205,7 @@ def settings():
 
     if flask.request.method == "POST":
         posted = UserSettings(username=user,
-                        signal_priority=flask.request.json.get("signal_priority") or 0,
+                        signal_priority=-1,
                         email_priority=flask.request.json.get("email_priority") or 0,
                         ntfy_priority=flask.request.json.get("ntfy_priority") or 0)
         db.session.merge(posted)
@@ -220,7 +215,7 @@ def settings():
     if flask.request.method == "GET":
         user_settings = db.session.query(UserSettings).filter(UserSettings.username==user).first()
         if not user_settings:
-            posted = UserSettings(username=user, signal_priority=5, email_priority=7, ntfy_priority=3)
+            posted = UserSettings(username=user, signal_priority=-1, email_priority=7, ntfy_priority=3)
             db.session.merge(posted)
             db.session.commit()
             user_settings = posted
@@ -240,7 +235,7 @@ def get_dispatch():
         return (BAD_DISPATCH_ACCESS_TOKEN, 401)
 
     if not method:
-        return (500, "Missing Dispatch Target (signal|email|phone|ntfy|all|any)")
+        return (500, "Missing Dispatch Target (email|phone|ntfy|all|any)")
 
     # prevent message floods #
     timeout_cutoff = datetime.datetime.now() - datetime.timedelta(seconds=timeout)
@@ -262,45 +257,7 @@ def get_dispatch():
     else:
         dispatch_objects = lines_timeout.all()
 
-    # TODO THIS IS THE NEW MASTER PART
-    if method and method != "signal":
-        debug = [ d.serialize() for d in dispatch_objects]
-        if debug:
-            print(debug)
-        return flask.jsonify([ d.serialize() for d in dispatch_objects])
-    else:
-        # TODO THIS PART WILL BE REMOVED ##
-        # accumulate messages by person #
-        dispatch_by_person = dict()
-        dispatch_secrets = []
-        for dobj in dispatch_objects:
-            if dobj.username not in dispatch_by_person:
-                dispatch_by_person.update({ dobj.username : dobj.message })
-                dispatch_secrets.append(dobj.dispatch_secret)
-            else:
-                dispatch_by_person[dobj.username] += "\n{}".format(dobj.message)
-                dispatch_secrets.append(dobj.dispatch_secret)
-
-        # legacy hack #
-        if method == "any":
-            method = "signal"
-
-        response = [ { "person" : tupel[0].decode("utf-8"),
-                        "message" : tupel[1],
-                        "method" : method,
-                        "uids" : dispatch_secrets 
-                      } for tupel in dispatch_by_person.items() ]
-
-        # add phone numbers and emails #
-        for obj in response:
-            for person in dispatch_objects:
-                if obj["person"] == person.username.decode("utf-8"):
-                    if person.email:
-                        obj.update({ "email" : person.email.decode("utf-8") })
-                    if person.phone:
-                        obj.update({ "phone" : person.phone.decode("utf-8") })
-
-        return flask.jsonify(response)
+    return flask.jsonify([ d.serialize() for d in dispatch_objects])
 
 @app.route('/report-dispatch-failed', methods=["POST"])
 def reject_dispatch():
@@ -497,8 +454,6 @@ if __name__ == "__main__":
 
     parser.add_argument('--interface', default="localhost", help='Interface on which to listen')
     parser.add_argument('--port', default="5000", help='Port on which to listen')
-    parser.add_argument("--signal-cli-bin", default=None, type=str,
-                            help="Path to signal-cli binary if no in $PATH")
 
     parser.add_argument('--ldap-server')
     parser.add_argument('--ldap-base-dn')
