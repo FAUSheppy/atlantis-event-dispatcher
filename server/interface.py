@@ -67,7 +67,7 @@ class UserSettings(db.Model):
             "email_priority" : self.email_priority,
             "ntfy_priority" : self.ntfy_priority,
         }
-        
+
 
 class DispatchObject(db.Model):
 
@@ -398,6 +398,15 @@ def save_in_dispatch_queue(persons, title, message, method, link=""):
         dispatch_secret = secrets.token_urlsafe(32)
 
         master_method = "any"
+
+        # handle bytes input #
+        def normalize(v):
+            return v.decode("utf-8") if isinstance(v, bytes) else v
+
+        p.username = normalize(p.username)
+        p.phone = normalize(p.phone)
+        p.email = normalize(p.email)
+
         obj = DispatchObject(username=p.username,
                         phone=p.phone,
                         email=p.email,
