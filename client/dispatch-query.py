@@ -174,6 +174,8 @@ if __name__ == "__main__":
     smtp_pass = args.smtp_pass or os.environ.get("SMTP_PASS")
     smtp_port = args.smtp_port or os.environ.get("SMTP_PORT")
 
+    polling_interval = int(os.environ.get("POLLING_INTERVAL_SECONDS") or 5)
+
     first_run = True
     while args.loop or first_run:
 
@@ -228,7 +230,7 @@ if __name__ == "__main__":
 
         # wait a moment #
         if args.loop:
-            time.sleep(5)
+            time.sleep(polling_interval)
 
         # handle non-loop runs #
         first_run = False
