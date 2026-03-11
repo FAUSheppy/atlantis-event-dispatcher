@@ -449,7 +449,7 @@ def create_app():
     app.config["SUBSTITUTIONS"] = {}
     if os.path.isfile(substitution_config_file):
         with open(substitution_config_file) as f:
-            app.config["SUBSTITUTIONS"] = yaml.safe_load(f)
+            app.config["SUBSTITUTIONS"] = yaml.safe_load(f) or {}
 
     print("Loaded subs:", substitution_config_file, app.config["SUBSTITUTIONS"], file=sys.stderr)
 
