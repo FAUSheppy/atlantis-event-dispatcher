@@ -211,6 +211,8 @@ if __name__ == "__main__":
             email_address = entry.get("email")
 
             # send message #
+            print(f"Sending: {method} {hash(str(title))} @ {datetime.datetime.now()}",
+                    file=sys.stderr)
             if method == "signal":
                 pass
             elif method == "ntfy":
