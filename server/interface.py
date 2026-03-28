@@ -352,7 +352,6 @@ def smart_send_to_clients(path=None):
     if not dispatch_acces_token:
         dispatch_acces_token = flask.request.headers.get("Dispatcher-Token") or ""
 
-    print(path)
     if path:
         webhook_path = db.session.query(WebHookPaths).filter(WebHookPaths.path==path).first()
         if webhook_path:
@@ -387,6 +386,8 @@ def smart_send_to_clients(path=None):
 
 def save_in_dispatch_queue(persons, title, message, method, link=""):
 
+    now_str = str(datetime.datetime.now())
+    print(f"Scheduling message to {abs(hash(str(persons)))} @ {now_str}", file=sys.stderr)
 
     dispatch_secrets = []
     for p in persons:
