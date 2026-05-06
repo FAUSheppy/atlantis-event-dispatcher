@@ -429,7 +429,11 @@ def save_in_dispatch_queue(persons, title, message, method, link=""):
 @app.route("/health")
 def health():
 
-    return ("Not Iplemented, but at least it's running", 200)
+    try:
+        db.session.execute(text("SELECT 1"))
+        return ({"status": "ok"}, 200)
+    except Exception as e:
+        return ({"status": "error", "message": str(e)}, 500)
 
 def create_app():
 
