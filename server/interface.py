@@ -12,12 +12,13 @@ import yaml
 import ldaptools
 import messagetools
 
-from sqlalchemy import Column, Integer, String, Boolean, or_, and_
+from sqlalchemy import Column, Integer, String, Boolean, or_, and_, text
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.sql import func
 import sqlalchemy
 from flask_sqlalchemy import SQLAlchemy
+
 from sqlalchemy.sql.expression import func
 
 OPENSEARCH_HEADER_SEPERATOR = ","
