@@ -448,8 +448,9 @@ def create_app():
             "LDAP_BASE_DN" : os.environ["LDAP_BASE_DN"]
         }
         app.config["LDAP_ARGS"] = ldap_args
-        app.config["SETTINGS_ACCESS_TOKEN"] = os.environ["SETTINGS_ACCESS_TOKEN"]
-        app.config["DISPATCH_ACCESS_TOKEN"] = os.environ["DISPATCH_ACCESS_TOKEN"]
+
+    app.config["SETTINGS_ACCESS_TOKEN"] = os.environ["SETTINGS_ACCESS_TOKEN"]
+    app.config["DISPATCH_ACCESS_TOKEN"] = os.environ["DISPATCH_ACCESS_TOKEN"]
 
     substitution_config_file = os.environ.get("SUBSTITUTION_MAP") or "substitutions.yaml"
     app.config["SUBSTITUTIONS"] = {}
