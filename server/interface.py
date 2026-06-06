@@ -149,7 +149,7 @@ def webhooks():
         posted = WebHookPaths(username=user, path=secrets.token_urlsafe(20))
         db.session.merge(posted)
         db.session.commit()
-        return ("", 204)
+        return flask.jsonify({ "webhook-identity": posted.path})
     elif flask.request.method == "GET":
         webhooks = db.session.query(WebHookPaths).filter(WebHookPaths.username==user).all()
         if not webhooks:
