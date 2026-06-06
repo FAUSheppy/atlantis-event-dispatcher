@@ -440,6 +440,7 @@ def create_app():
 
     db.create_all()
 
+    app.config["LDAP_NO_READ_ENV"] = os.environ.get("LDAP_NO_READ_ENV") or app.config.get("LDAP_NO_READ_ENV")
     if not app.config.get("LDAP_NO_READ_ENV"):
         ldap_args = {
             "LDAP_SERVER"  : os.environ["LDAP_SERVER"],
