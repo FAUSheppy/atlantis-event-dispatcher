@@ -1,4 +1,4 @@
-python-ldap==3.4.5
+python-ldap==3.4.8
 psycopg2-binary==2.9.13
 PyYAML==6.0.3
 Flask==3.1.3
