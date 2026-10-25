@@ -32,7 +32,7 @@ jobs:
           password: ${{ secrets.REGISTRY_PASS }}
       -
         name: Build and push event-dispatcher
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v7
         with:
           context: ./server/
           platforms: linux/amd64
@@ -40,7 +40,7 @@ jobs:
           tags: "${{ secrets.REGISTRY }}/atlantishq/event-dispatcher:latest"
       -
         name: Build and push event-dispatcher
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v7
         with:
           context: ./client/
           platforms: linux/amd64
